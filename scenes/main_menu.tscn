@@ -1,0 +1,40 @@
+[gd_scene load_steps=3 format=3 uid="uid://ckvqwo4vfm1hf"]
+
+[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_g23d5"]
+[ext_resource type="Texture2D" uid="uid://ce2kwfpyyxl3d" path="res://assets/textures/fachadaaaaaaaaaa.png" id="1_q4g5m"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_g23d5")
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("1_q4g5m")
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -43.0
+offset_top = -31.0
+offset_right = 43.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 8
+text = "Novo jogo"
+
+[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]

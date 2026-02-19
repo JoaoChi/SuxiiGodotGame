@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d3p2jgf1t5po3"
-path="res://.godot/imported/Bancadinhaaaaaaaaaaaaaaaaaaaa.png-6dc371cb4818c9bd6e3a3ec06ea41f73.ctex"
+uid="uid://cbca0ildvv128"
+path="res://.godot/imported/visao_atendente(1).jpg-2cc6c2cfc92977df35328d1666e2ba70.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Bancadinhaaaaaaaaaaaaaaaaaaaa.png"
-dest_files=["res://.godot/imported/Bancadinhaaaaaaaaaaaaaaaaaaaa.png-6dc371cb4818c9bd6e3a3ec06ea41f73.ctex"]
+source_file="res://assets/textures/visao_atendente(1).jpg"
+dest_files=["res://.godot/imported/visao_atendente(1).jpg-2cc6c2cfc92977df35328d1666e2ba70.ctex"]
 
 [params]
 
