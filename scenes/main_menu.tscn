@@ -1,9 +1,61 @@
-[gd_scene load_steps=3 format=3 uid="uid://ckvqwo4vfm1hf"]
+[gd_scene format=3 uid="uid://ckvqwo4vfm1hf"]
 
-[ext_resource type="Script" path="res://scripts/main_menu.gd" id="1_g23d5"]
+[ext_resource type="Script" uid="uid://d3endv31ve5p1" path="res://scripts/main_menu.gd" id="1_g23d5"]
 [ext_resource type="Texture2D" uid="uid://ce2kwfpyyxl3d" path="res://assets/textures/fachadaaaaaaaaaa.png" id="1_q4g5m"]
 
-[node name="MainMenu" type="Control"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 24.0
+content_margin_top = 24.0
+content_margin_right = 24.0
+content_margin_bottom = 24.0
+bg_color = Color(0.1, 0.06, 0.04, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.85, 0.55, 0.2, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
+bg_color = Color(0.2, 0.12, 0.06, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9, 0.6, 0.15, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
+bg_color = Color(0.15, 0.09, 0.04, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.75, 0.5, 0.15, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+bg_color = Color(0.35, 0.2, 0.08, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.75, 0.35, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="MainMenu" type="Control" unique_id=211276655]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,29 +64,76 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_g23d5")
 
-[node name="TextureRect" type="TextureRect" parent="."]
+[node name="TextureRect" type="TextureRect" parent="." unique_id=593530232]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 3.0
+offset_top = 2.0
+offset_right = 3.0
+offset_bottom = 2.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("1_q4g5m")
+expand_mode = 1
+stretch_mode = 6
 
-[node name="Button" type="Button" parent="."]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=1876280793]
 layout_mode = 1
-anchors_preset = 7
+anchors_preset = 8
 anchor_left = 0.5
-anchor_top = 1.0
+anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -43.0
-offset_top = -31.0
-offset_right = 43.0
-offset_bottom = 0.0
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = 98.0
+offset_right = 100.0
+offset_bottom = 338.0
 grow_horizontal = 2
-grow_vertical = 0
-size_flags_vertical = 8
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=457150746]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="NovoJogo" type="Button" parent="PanelContainer/VBoxContainer" unique_id=1324389599]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
+theme_override_colors/font_pressed_color = Color(0.85, 0.65, 0.25, 1)
+theme_override_colors/font_hover_color = Color(1, 0.9, 0.6, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "Novo jogo"
 
-[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
+[node name="Configuracao" type="Button" parent="PanelContainer/VBoxContainer" unique_id=448859342]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
+theme_override_colors/font_pressed_color = Color(0.85, 0.65, 0.25, 1)
+theme_override_colors/font_hover_color = Color(1, 0.9, 0.6, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "Configuração"
+
+[node name="Sair" type="Button" parent="PanelContainer/VBoxContainer" unique_id=579389678]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
+theme_override_colors/font_pressed_color = Color(0.85, 0.65, 0.25, 1)
+theme_override_colors/font_hover_color = Color(1, 0.9, 0.6, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "Sair"
+
+[connection signal="pressed" from="PanelContainer/VBoxContainer/NovoJogo" to="." method="_on_novo_jogo_pressed"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/Configuracao" to="." method="_on_configuracao_pressed"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/Sair" to="." method="_on_sair_pressed"]
