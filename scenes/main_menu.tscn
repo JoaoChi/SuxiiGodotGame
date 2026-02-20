@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://ckvqwo4vfm1hf"]
 
 [ext_resource type="Script" uid="uid://d3endv31ve5p1" path="res://scripts/main_menu.gd" id="1_g23d5"]
-[ext_resource type="Texture2D" uid="uid://ce2kwfpyyxl3d" path="res://assets/textures/fachadaaaaaaaaaa.png" id="1_q4g5m"]
+[ext_resource type="VideoStream" uid="uid://c03koxgdnj8ge" path="res://assets/videos/animated_menu.ogv" id="1_menu_video"]
+[ext_resource type="VideoStream" uid="uid://cyacqfp006fts" path="res://assets/videos/continuar.ogv" id="2_video"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 24.0
@@ -64,20 +65,32 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_g23d5")
 
-[node name="TextureRect" type="TextureRect" parent="." unique_id=593530232]
+[node name="BackgroundVideo" type="VideoStreamPlayer" parent="." unique_id=593530232]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 3.0
 offset_top = 2.0
-offset_right = 3.0
-offset_bottom = 2.0
+offset_right = 11.0
+offset_bottom = 7.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("1_q4g5m")
-expand_mode = 1
-stretch_mode = 6
+stream = ExtResource("1_menu_video")
+autoplay = true
+expand = true
+loop = true
+
+[node name="ContinuarVideo" type="VideoStreamPlayer" parent="." unique_id=2016385801]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stream = ExtResource("2_video")
+expand = true
 
 [node name="PanelContainer" type="PanelContainer" parent="." unique_id=1876280793]
 layout_mode = 1
@@ -86,10 +99,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = 98.0
-offset_right = 100.0
-offset_bottom = 338.0
+offset_left = -107.0
+offset_top = 120.0
+offset_right = 153.0
+offset_bottom = 416.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
@@ -97,6 +110,18 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=457150746]
 layout_mode = 2
 theme_override_constants/separation = 16
+
+[node name="Continuar" type="Button" parent="PanelContainer/VBoxContainer" unique_id=1658995611]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
+theme_override_colors/font_pressed_color = Color(0.85, 0.65, 0.25, 1)
+theme_override_colors/font_hover_color = Color(1, 0.9, 0.6, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "Continuar"
 
 [node name="NovoJogo" type="Button" parent="PanelContainer/VBoxContainer" unique_id=1324389599]
 custom_minimum_size = Vector2(200, 50)
@@ -134,6 +159,8 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
 theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "Sair"
 
+[connection signal="finished" from="ContinuarVideo" to="." method="_on_video_finished"]
+[connection signal="pressed" from="PanelContainer/VBoxContainer/Continuar" to="." method="_on_continuar_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/NovoJogo" to="." method="_on_novo_jogo_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/Configuracao" to="." method="_on_configuracao_pressed"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/Sair" to="." method="_on_sair_pressed"]
