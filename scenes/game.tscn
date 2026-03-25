@@ -1,59 +1,584 @@
 [gd_scene format=3 uid="uid://b2x4n8qm3yc5s"]
 
-[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Script" uid="uid://bh6q8kb8vr832" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Script" uid="uid://cdhbbgvqjaer5" path="res://scripts/order_manager.gd" id="2_order"]
+[ext_resource type="Script" uid="uid://bf7hyvd60nxrs" path="res://scripts/draggable_ingredient.gd" id="3_drag"]
+[ext_resource type="Script" uid="uid://qe62101sevbb" path="res://scripts/drop_zone.gd" id="4_drop"]
+[ext_resource type="Script" uid="uid://dm7hfr1yk8p2w" path="res://scripts/fryer_drop_zone.gd" id="5_fryer"]
+[ext_resource type="Script" uid="uid://bm8k2j4xqyp7w" path="res://scripts/tabua_corte.gd" id="6_tabua"]
+[ext_resource type="Texture2D" uid="uid://d3p2jgf1t5po3" path="res://assets/textures/Bancadinhaaaaaaaaaaaaaaaaaaaa.png" id="8_bancada"]
 
-[node name="Game" type="Control"]
+[node name="Game" type="Control" unique_id=603755664]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_game")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="OrderManager" type="Node" parent="." unique_id=3169729]
+script = ExtResource("2_order")
+
+[node name="BancadaFundo" type="TextureRect" parent="." unique_id=789100001]
+z_index = -10
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 0.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.15, 0.18, 0.22, 1)
+mouse_filter = 0
+texture = ExtResource("8_bancada")
+stretch_mode = 6
+script = ExtResource("4_drop")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="SpriteSushiPronto" type="TextureRect" parent="BancadaFundo" unique_id=55813515]
+visible = false
+custom_minimum_size = Vector2(180, 180)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -150.0
-offset_top = -80.0
-offset_right = 150.0
-offset_bottom = 80.0
+offset_left = -90.0
+offset_top = -90.0
+offset_right = 90.0
+offset_bottom = 90.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
 
-[node name="Label" type="Label" parent="VBoxContainer"]
+[node name="HUDSuperior" type="MarginContainer" parent="." unique_id=1031079438]
+z_index = 12
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 88.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 10
+
+[node name="HBoxHUD" type="HBoxContainer" parent="HUDSuperior" unique_id=1879701001]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
-text = "Novo Jogo"
-horizontal_alignment = 1
-vertical_alignment = 1
 
-[node name="Voltar" type="Button" parent="VBoxContainer"]
-custom_minimum_size = Vector2(200, 50)
+[node name="LabelHUDUX" type="Label" parent="HUDSuperior/HBoxHUD" unique_id=1993103206]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "Dinheiro: R$ 0.00 | Reputação: 5.0 | Combo: 0"
+horizontal_alignment = 1
+
+[node name="LabelStatusUX" type="Label" parent="HUDSuperior/HBoxHUD" unique_id=651627779]
+layout_mode = 2
+size_flags_horizontal = 2
+theme_override_font_sizes/font_size = 18
+text = "Status"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="PainelDialogo" type="PanelContainer" parent="." unique_id=1718539097]
+z_index = 10
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -140.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="LabelDialogoUX" type="Label" parent="PainelDialogo" unique_id=989802050]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Diálogo"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="DockIngredientes" type="MarginContainer" parent="." unique_id=1771760000]
+z_index = 4
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -124.0
+offset_top = 96.0
+offset_right = -18.0
+offset_bottom = -148.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxIngredientes" type="VBoxContainer" parent="DockIngredientes" unique_id=1771760001]
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Voltar"
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 1
 
-[connection signal="pressed" from="VBoxContainer/Voltar" to="." method="_on_voltar_pressed"]
+[node name="IngredienteArroz" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=214368726]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.98, 0.97, 0.94, 1)
+script = ExtResource("3_drag")
+nome_ingrediente = "arroz"
+
+[node name="IngredienteSalmao" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1134997851]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.95, 0.45, 0.25, 1)
+script = ExtResource("3_drag")
+nome_ingrediente = "salmao"
+
+[node name="IngredienteAlga" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1916452637]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.05, 0.25, 0.12, 1)
+script = ExtResource("3_drag")
+nome_ingrediente = "alga"
+
+[node name="IngredienteCebolinha" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=323497653]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.2, 0.8, 0.2, 1)
+script = ExtResource("3_drag")
+nome_ingrediente = "cebolinha"
+
+[node name="IngredienteGergelim" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1892775484]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.9, 0.8, 0.6, 1)
+script = ExtResource("3_drag")
+nome_ingrediente = "gergelim"
+
+[node name="IngredienteCreamCheese" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1919205243]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(1, 0.95, 0.9, 1)
+script = ExtResource("3_drag")
+nome_ingrediente = "cream_cheese"
+
+[node name="IngredienteMassa" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=662050921]
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+size_flags_horizontal = 4
+color = Color(0.8, 0.5, 0.2, 1)
+script = ExtResource("3_drag")
+nome_ingrediente = "massa_empanar"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=421176825]
+z_index = 2
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 96.0
+offset_right = -136.0
+offset_bottom = -148.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="LabelHUD" type="Label" parent="VBoxContainer" unique_id=1235959065]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Dinheiro: R$ 0.00 | Reputação: 5.0 | Combo: 0"
+horizontal_alignment = 1
+
+[node name="LabelDialogo" type="Label" parent="VBoxContainer" unique_id=1120191610]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Diálogo"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LabelPedido" type="Label" parent="VBoxContainer" unique_id=1957781937]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Pedido"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LabelStatus" type="Label" parent="VBoxContainer" unique_id=748306497]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Status"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BarraTempo" type="ProgressBar" parent="VBoxContainer" unique_id=1120445222]
+visible = false
+custom_minimum_size = Vector2(300, 20)
+layout_mode = 2
+show_percentage = false
+
+[node name="BtnEntregar" type="Button" parent="VBoxContainer" unique_id=1340050851]
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Entregar"
+
+[node name="MarginContainerEstoque" type="MarginContainer" parent="VBoxContainer" unique_id=972241472]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 8
+
+[node name="LabelEstoqueUX" type="Label" parent="VBoxContainer/MarginContainerEstoque" unique_id=1924001725]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "Estoque (bancada): —"
+autowrap_mode = 2
+
+[node name="BtnTabua" type="Button" parent="VBoxContainer" unique_id=1677369420]
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+text = "Tábua de corte (+5 arroz, salmão, alga · 2s)"
+script = ExtResource("6_tabua")
+
+[node name="ProgressBar" type="ProgressBar" parent="VBoxContainer/BtnTabua" unique_id=1889971191]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -30.0
+offset_right = -10.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+show_percentage = false
+
+[node name="LabelEstoque" type="Label" parent="VBoxContainer" unique_id=1337083524]
+visible = false
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Estoque (bancada): —"
+autowrap_mode = 2
+
+[node name="HBoxPreparo" type="HBoxContainer" parent="VBoxContainer" unique_id=872738354]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="LabelPreparo" type="Label" parent="VBoxContainer/HBoxPreparo" unique_id=2140284869]
+layout_mode = 2
+text = "Preparo:"
+
+[node name="ProgressBarPrep" type="ProgressBar" parent="VBoxContainer/HBoxPreparo" unique_id=698991042]
+visible = false
+custom_minimum_size = Vector2(200, 22)
+layout_mode = 2
+size_flags_vertical = 4
+show_percentage = false
+
+[node name="BtnPrepArroz" type="Button" parent="VBoxContainer/HBoxPreparo" unique_id=1073577156]
+layout_mode = 2
+text = "Preparar Arroz (+10)"
+
+[node name="BtnPrepSalmao" type="Button" parent="VBoxContainer/HBoxPreparo" unique_id=85767707]
+layout_mode = 2
+text = "Cortar Salmão (+10)"
+
+[node name="BtnPrepAlga" type="Button" parent="VBoxContainer/HBoxPreparo" unique_id=382634470]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Preparar Alga (+10)"
+
+[node name="BtnPrepCebolinha" type="Button" parent="VBoxContainer/HBoxPreparo" unique_id=390877405]
+visible = false
+layout_mode = 2
+text = "Preparar Cebolinha (+10)"
+
+[node name="BtnPrepGergelim" type="Button" parent="VBoxContainer/HBoxPreparo" unique_id=176421837]
+visible = false
+layout_mode = 2
+text = "Preparar Gergelim (+10)"
+
+[node name="BtnPrepCreamCheese" type="Button" parent="VBoxContainer/HBoxPreparo" unique_id=1821060620]
+visible = false
+layout_mode = 2
+text = "Preparar Cream cheese (+10)"
+
+[node name="SpacerBancada" type="Control" parent="VBoxContainer" unique_id=510047581]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="HBoxBancadaEFritura" type="HBoxContainer" parent="VBoxContainer" unique_id=2135904747]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 24
+alignment = 2
+
+[node name="VBoxFritura" type="VBoxContainer" parent="VBoxContainer/HBoxBancadaEFritura" unique_id=922759830]
+custom_minimum_size = Vector2(168, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="LabelFritadeira" type="Label" parent="VBoxContainer/HBoxBancadaEFritura/VBoxFritura" unique_id=1620656042]
+layout_mode = 2
+text = "Fritadeira — solte a massa empanada aqui (3s)"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Fritadeira" type="ColorRect" parent="VBoxContainer/HBoxBancadaEFritura/VBoxFritura" unique_id=1912339903]
+custom_minimum_size = Vector2(150, 200)
+layout_mode = 2
+size_flags_vertical = 3
+color = Color(0.18, 0.18, 0.2, 1)
+script = ExtResource("5_fryer")
+
+[node name="ProgressBarFritura" type="ProgressBar" parent="VBoxContainer/HBoxBancadaEFritura/VBoxFritura/Fritadeira" unique_id=576293079]
+visible = false
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = -32.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 0
+show_percentage = false
+
+[node name="BtnAbrir" type="Button" parent="." unique_id=2010491429]
+visible = false
+custom_minimum_size = Vector2(220, 48)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -110.0
+offset_top = -300.0
+offset_right = 110.0
+offset_bottom = -252.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Abrir Restaurante"
+
+[node name="SpriteCliente" type="TextureRect" parent="." unique_id=2109616847]
+z_index = 11
+custom_minimum_size = Vector2(280, 380)
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = -451.0
+offset_right = 333.0
+grow_vertical = 0
+mouse_filter = 2
+stretch_mode = 6
+
+[node name="PainelResumo" type="PanelContainer" parent="." unique_id=1587538815]
+z_index = 40
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -180.0
+offset_right = 260.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="PainelResumo" unique_id=1394944121]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="LabelResumo" type="Label" parent="PainelResumo/VBox" unique_id=1793284726]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Resumo do dia"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="BtnProximoDia" type="Button" parent="PainelResumo/VBox" unique_id=804482414]
+layout_mode = 2
+text = "Ir para o Próximo Dia"
+
+[node name="PainelLoja" type="PanelContainer" parent="." unique_id=1554800722]
+z_index = 40
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -220.0
+offset_right = 320.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="PainelLoja" unique_id=691748818]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LabelTituloLoja" type="Label" parent="PainelLoja/VBox" unique_id=1371445688]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Loja de ingredientes"
+horizontal_alignment = 1
+
+[node name="HBoxCebolinha" type="HBoxContainer" parent="PainelLoja/VBox" unique_id=1230806474]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LabelCebolinha" type="Label" parent="PainelLoja/VBox/HBoxCebolinha" unique_id=568022259]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Cebolinha — R$ 50,00"
+
+[node name="BtnComprarCebolinha" type="Button" parent="PainelLoja/VBox/HBoxCebolinha" unique_id=92656806]
+layout_mode = 2
+text = "Comprar"
+
+[node name="HBoxGergelim" type="HBoxContainer" parent="PainelLoja/VBox" unique_id=144221395]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LabelGergelim" type="Label" parent="PainelLoja/VBox/HBoxGergelim" unique_id=460530269]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Gergelim — R$ 75,00"
+
+[node name="BtnComprarGergelim" type="Button" parent="PainelLoja/VBox/HBoxGergelim" unique_id=1207043383]
+layout_mode = 2
+text = "Comprar"
+
+[node name="HBoxCreamCheese" type="HBoxContainer" parent="PainelLoja/VBox" unique_id=1777184220]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LabelCreamCheese" type="Label" parent="PainelLoja/VBox/HBoxCreamCheese" unique_id=67779854]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Cream cheese — R$ 100,00"
+
+[node name="BtnComprarCreamCheese" type="Button" parent="PainelLoja/VBox/HBoxCreamCheese" unique_id=868224522]
+layout_mode = 2
+text = "Comprar"
+
+[node name="HBoxMassaEmpanar" type="HBoxContainer" parent="PainelLoja/VBox" unique_id=629901913]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="LabelMassaEmpanar" type="Label" parent="PainelLoja/VBox/HBoxMassaEmpanar" unique_id=659672871]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Massa empanar — R$ 150,00"
+
+[node name="BtnComprarMassaEmpanar" type="Button" parent="PainelLoja/VBox/HBoxMassaEmpanar" unique_id=1233702125]
+layout_mode = 2
+text = "Comprar"
+
+[node name="BtnVoltarProximoDia" type="Button" parent="PainelLoja/VBox" unique_id=1685383317]
+layout_mode = 2
+text = "Voltar / Próximo Dia"
+
+[node name="PainelGameOver" type="PanelContainer" parent="." unique_id=430382107]
+z_index = 50
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -320.0
+offset_top = -240.0
+offset_right = 320.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="VBox" type="VBoxContainer" parent="PainelGameOver" unique_id=324691515]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LabelTitulo" type="Label" parent="PainelGameOver/VBox" unique_id=199963541]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.2, 0.2, 1)
+theme_override_font_sizes/font_size = 34
+text = "RESTAURANTE FALIDO"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LabelMotivo" type="Label" parent="PainelGameOver/VBox" unique_id=1202231643]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "A sua reputação chegou a zero. O Su XIII fechou as portas."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LabelEstatisticas" type="Label" parent="PainelGameOver/VBox" unique_id=1441612969]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Dias sobrevividos: %d | Faturamento Total: R$ %.2f"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="ButtonReiniciar" type="Button" parent="PainelGameOver/VBox" unique_id=2045534587]
+custom_minimum_size = Vector2(240, 44)
+layout_mode = 2
+text = "Tentar Novamente"
+
+[connection signal="pressed" from="VBoxContainer/BtnEntregar" to="." method="_on_btn_entregar_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxPreparo/BtnPrepArroz" to="." method="_on_btn_prep_arroz_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxPreparo/BtnPrepSalmao" to="." method="_on_btn_prep_salmao_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxPreparo/BtnPrepAlga" to="." method="_on_btn_prep_alga_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxPreparo/BtnPrepCebolinha" to="." method="_on_btn_prep_cebolinha_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxPreparo/BtnPrepGergelim" to="." method="_on_btn_prep_gergelim_pressed"]
+[connection signal="pressed" from="VBoxContainer/HBoxPreparo/BtnPrepCreamCheese" to="." method="_on_btn_prep_cream_cheese_pressed"]
+[connection signal="pressed" from="BtnAbrir" to="." method="_on_btn_abrir_pressed"]
+[connection signal="pressed" from="PainelResumo/VBox/BtnProximoDia" to="." method="_on_btn_proximo_dia_pressed"]
+[connection signal="pressed" from="PainelLoja/VBox/HBoxCebolinha/BtnComprarCebolinha" to="." method="_on_btn_comprar_cebolinha_pressed"]
+[connection signal="pressed" from="PainelLoja/VBox/HBoxGergelim/BtnComprarGergelim" to="." method="_on_btn_comprar_gergelim_pressed"]
+[connection signal="pressed" from="PainelLoja/VBox/HBoxCreamCheese/BtnComprarCreamCheese" to="." method="_on_btn_comprar_cream_cheese_pressed"]
+[connection signal="pressed" from="PainelLoja/VBox/HBoxMassaEmpanar/BtnComprarMassaEmpanar" to="." method="_on_btn_comprar_massa_empanar_pressed"]
+[connection signal="pressed" from="PainelLoja/VBox/BtnVoltarProximoDia" to="." method="_on_btn_voltar_loja_pressed"]
+[connection signal="pressed" from="PainelGameOver/VBox/ButtonReiniciar" to="." method="_on_btn_reiniciar_pressed"]

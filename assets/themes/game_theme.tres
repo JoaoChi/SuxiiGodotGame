@@ -1,0 +1,13 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://c4mx8theme_game01"]
+
+[ext_resource type="FontFile" path="res://assets/fonts/pixel.ttf" id="1_font"]
+
+[resource]
+default_font = ExtResource("1_font")
+default_font_size = 20
+Button/colors/font_color = Color(1, 1, 1, 1)
+Button/font_sizes/font_size = 20
+Label/colors/font_color = Color(1, 1, 1, 1)
+Label/font_sizes/font_size = 22
+LineEdit/font_sizes/font_size = 20
+RichTextLabel/font_sizes/normal_font_size = 22
