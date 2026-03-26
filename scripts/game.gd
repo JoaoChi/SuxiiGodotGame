@@ -47,6 +47,7 @@ func _ready() -> void:
 
 	_injetar_feedback_montagem_e_lixeira()
 	_injetar_botoes_ferramentas()
+	_atualizar_botoes_estoque_bancada()
 	_atualizar_textos_botoes_preparo()
 	
 	painel_resumo.hide()
@@ -186,6 +187,7 @@ func preparar_novo_dia() -> void:
 
 func _on_estoque_alterado() -> void:
 	atualizar_label_estoque()
+	_atualizar_botoes_estoque_bancada()
 
 func atualizar_label_estoque() -> void:
 	var partes: PackedStringArray = []
@@ -195,6 +197,50 @@ func atualizar_label_estoque() -> void:
 		var q: int = int(GameManager.estoque_bancada.get(item, 0))
 		partes.append("%s: %d" % [item, q])
 	label_estoque.text = "Estoque (bancada): " + ", ".join(partes)
+
+func _atualizar_botoes_estoque_bancada() -> void:
+	if not is_instance_valid(vbox_ingredientes):
+		return
+
+	for child in vbox_ingredientes.get_children():
+		var botao: Button = child as Button
+		if botao == null:
+			continue
+
+		var item: String = _resolver_item_botao_doca(botao)
+		if item == "":
+			continue
+
+		if item in ["faca", "esteira", "fritadeira"]:
+			continue
+
+		if not GameManager.ingredientes_desbloqueados.get(item, false):
+			botao.disabled = true
+			continue
+
+		var qtd: int = int(GameManager.estoque_bancada.get(item, 0))
+		botao.text = "%s [ %d ]" % [_nome_legivel_item(item), qtd]
+		botao.disabled = qtd <= 0
+
+func _resolver_item_botao_doca(botao: Button) -> String:
+	if not is_instance_valid(botao):
+		return ""
+
+	var nome_no: String = botao.name.to_lower()
+	if nome_no.begins_with("btn_"):
+		return nome_no.trim_prefix("btn_")
+
+	if nome_no.begins_with("ingrediente"):
+		var chave: String = nome_no.trim_prefix("ingrediente")
+		match chave:
+			"massa":
+				return "massa_empanar"
+			"creamcheese":
+				return "cream_cheese"
+			_:
+				return chave
+
+	return ""
 
 func _atualizar_visibilidade_ingredientes_e_preparo() -> void:
 	$DockIngredientes/VBoxIngredientes/IngredienteCebolinha.visible = GameManager.ingredientes_desbloqueados["cebolinha"]

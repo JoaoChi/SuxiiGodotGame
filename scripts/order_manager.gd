@@ -46,8 +46,10 @@ func gerar_novo_pedido() -> void:
 		emit_signal("expediente_encerrado")
 		return
 
-	# 1. Filtrar apenas as receitas que o jogador PODE fazer no momento
-	var receitas_possiveis: Array = _get_receitas_possiveis()
+	# 1. Filtrar receitas disponíveis no dia + que o jogador pode montar.
+	var dados_progressao: Dictionary = GameManager.get_progressao_dia()
+	var receitas_do_dia: Array = dados_progressao.get("receitas_liberadas", [])
+	var receitas_possiveis: Array = _get_receitas_possiveis(receitas_do_dia)
 	if receitas_possiveis.is_empty():
 		receitas_possiveis = ["Sashimi"]
 
@@ -87,11 +89,13 @@ func gerar_novo_pedido() -> void:
 	var fala = cliente_atual.falas_recepcao.pick_random() % pedido_atual_nome
 	cliente_ativo = true
 
-	# O tempo escala com o total de ingredientes do combo.
-	# O Jôw é impaciente: tempo reduzido.
-	var tempo_limite := 10.0 + (receita_esperada.size() * 3.0)
+	# A paciência base escala por dia (modo infinito usa o último dia configurado).
+	# Ajuste leve por complexidade do pedido, sem perder a curva principal.
+	var paciencia_base: float = float(dados_progressao.get("paciencia_base", 30.0))
+	var tempo_limite := paciencia_base + (receita_esperada.size() * 1.5)
 	if sorteio_jow:
-		tempo_limite = 8.0 + (receita_esperada.size() * 2.0)
+		tempo_limite *= 0.8
+	tempo_limite = maxf(8.0, tempo_limite)
 
 	timer_pedido.start(tempo_limite)
 	emit_signal("pedido_gerado", cliente_atual.nome, fala, pedido_atual_nome, tempo_limite, cliente_atual.textura_pixel_art)
@@ -107,6 +111,7 @@ func _pick_cliente_nao_jow() -> ClienteData:
 
 func adicionar_ingrediente(ingrediente: String) -> void:
 	if not cliente_ativo: return
+	if not GameManager.consumir_estoque(ingrediente): return
 	montagem_atual.append(ingrediente)
 	emit_signal("ingrediente_adicionado", ingrediente)
 	emit_signal("montagem_atualizada", montagem_atual.duplicate())
@@ -187,9 +192,16 @@ func _get_receita_critica(lista: Array) -> String:
 
 	return lista.pick_random()
 
-func _get_receitas_possiveis() -> Array:
+func _get_receitas_possiveis(receitas_liberadas: Array = []) -> Array:
 	var possiveis: Array = []
-	for nome in GameManager.RECEITAS.keys():
+	var candidatos: Array = receitas_liberadas
+	if candidatos.is_empty():
+		candidatos = GameManager.RECEITAS.keys()
+
+	for nome_raw in candidatos:
+		var nome: String = str(nome_raw)
+		if not GameManager.RECEITAS.has(nome):
+			continue
 		var pode := true
 		for ing in GameManager.RECEITAS[nome]:
 			if not GameManager.ingredientes_desbloqueados.get(ing, false):

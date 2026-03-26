@@ -46,6 +46,34 @@ const RECEITAS: Dictionary = {
 	"Hot_Filadelfia": ["alga", "arroz", "salmao", "cream_cheese", "esteira", "massa_empanar", "fritadeira", "faca"]
 }
 
+const PROGRESSAO_DIAS: Dictionary = {
+	1: {
+		"receitas_liberadas": ["Nigiri", "Sashimi"],
+		"paciencia_base": 40.0,
+		"ingredientes_iniciais": ["arroz", "salmao", "faca"]
+	},
+	2: {
+		"receitas_liberadas": ["Nigiri", "Sashimi", "Maki"],
+		"paciencia_base": 35.0,
+		"ingredientes_iniciais": ["arroz", "salmao", "alga", "faca", "esteira"]
+	},
+	3: {
+		"receitas_liberadas": ["Nigiri", "Sashimi", "Maki", "Temaki"],
+		"paciencia_base": 30.0,
+		"ingredientes_iniciais": ["arroz", "salmao", "alga", "cebolinha", "faca", "esteira"]
+	},
+	4: {
+		"receitas_liberadas": ["Nigiri", "Sashimi", "Maki", "Temaki", "Uramaki"],
+		"paciencia_base": 27.0,
+		"ingredientes_iniciais": ["arroz", "salmao", "alga", "cebolinha", "gergelim", "faca", "esteira"]
+	},
+	5: {
+		"receitas_liberadas": ["Nigiri", "Sashimi", "Maki", "Temaki", "Uramaki", "Hot_Filadelfia"],
+		"paciencia_base": 24.0,
+		"ingredientes_iniciais": ["arroz", "salmao", "alga", "cebolinha", "gergelim", "cream_cheese", "massa_empanar", "faca", "esteira", "fritadeira"]
+	}
+}
+
 const PRECOS_BASE: Dictionary = {
 	"Sashimi": 15.0, "Nigiri": 10.0, "Maki": 12.0, "Temaki": 20.0,
 	"Uramaki": 14.0, "Filadelfia": 18.0, "Hot_Filadelfia": 22.0
@@ -94,10 +122,18 @@ func _estoque_inicial() -> Dictionary:
 	}
 
 func consumir_estoque(item: String) -> bool:
-	if estoque_bancada.get(item, 0) > 0:
-		estoque_bancada[item] -= 1
+	if item in ["faca", "esteira", "fritadeira"]:
+		return true
+
+	if not MERCADO.has(item):
+		return false
+
+	var quantidade_atual: int = int(estoque_bancada.get(item, 0))
+	if quantidade_atual > 0:
+		estoque_bancada[item] = quantidade_atual - 1
 		emit_signal("estoque_alterado")
 		return true
+
 	return false
 
 func repor_estoque(item: String) -> bool:
@@ -130,11 +166,35 @@ func processar_reputacao(valor: float) -> void:
 	if reputacao <= 0.0:
 		emit_signal("restaurante_falido")
 
+func get_progressao_dia(dia: int = -1) -> Dictionary:
+	if PROGRESSAO_DIAS.is_empty():
+		return {}
+
+	var dia_consulta: int = dia_atual if dia < 0 else dia
+	var maior_dia: int = 1
+	for chave in PROGRESSAO_DIAS.keys():
+		var chave_int: int = int(chave)
+		if chave_int > maior_dia:
+			maior_dia = chave_int
+
+	var dia_efetivo: int = mini(maxi(dia_consulta, 1), maior_dia)
+	return PROGRESSAO_DIAS.get(dia_efetivo, PROGRESSAO_DIAS.get(maior_dia, {}))
+
 func resetar_dia() -> void:
 	combos_consecutivos = 0
 	faturamento_dia = 0.0
 	acertos_dia = 0
 	erros_dia = 0
+
+	var dados_dia: Dictionary = get_progressao_dia()
+	var ingredientes_iniciais: Array = dados_dia.get("ingredientes_iniciais", [])
+	for chave in ingredientes_desbloqueados.keys():
+		ingredientes_desbloqueados[chave] = false
+	for item in ingredientes_iniciais:
+		var item_str: String = str(item)
+		if ingredientes_desbloqueados.has(item_str):
+			ingredientes_desbloqueados[item_str] = true
+
 	estoque_bancada = _estoque_inicial()
 	emit_signal("estoque_alterado")
 
