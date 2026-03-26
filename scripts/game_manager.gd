@@ -23,7 +23,11 @@ var ingredientes_desbloqueados: Dictionary = {
 	"cebolinha": false,
 	"gergelim": false,
 	"cream_cheese": false,
-	"massa_empanar": false
+	"massa_empanar": false,
+	# Ferramentas são permanentes e sempre disponíveis.
+	"faca": true,
+	"esteira": true,
+	"fritadeira": true
 }
 
 const CUSTO_DESBLOQUEIO: Dictionary = {
@@ -34,13 +38,12 @@ const CUSTO_DESBLOQUEIO: Dictionary = {
 }
 
 const RECEITAS: Dictionary = {
-	"Sashimi": ["salmao", "salmao", "salmao"],
+	"Sashimi": ["salmao", "salmao", "salmao", "faca"],
 	"Nigiri": ["arroz", "salmao"],
-	"Maki": ["alga", "arroz", "salmao"],
-	"Temaki": ["alga", "arroz", "salmao", "cebolinha"],
-	"Uramaki": ["arroz", "alga", "salmao", "gergelim"],
-	"Filadelfia": ["alga", "arroz", "salmao", "cream_cheese"],
-	"Hot_Filadelfia": ["alga", "arroz", "salmao", "cream_cheese", "massa_empanar"]
+	"Maki": ["alga", "arroz", "salmao", "esteira", "faca"],
+	"Temaki": ["alga", "arroz", "salmao", "cebolinha", "esteira"],
+	"Uramaki": ["arroz", "alga", "salmao", "gergelim", "esteira", "faca"],
+	"Hot_Filadelfia": ["alga", "arroz", "salmao", "cream_cheese", "esteira", "massa_empanar", "fritadeira", "faca"]
 }
 
 const PRECOS_BASE: Dictionary = {
@@ -48,25 +51,25 @@ const PRECOS_BASE: Dictionary = {
 	"Uramaki": 14.0, "Filadelfia": 18.0, "Hot_Filadelfia": 22.0
 }
 
-## Compara montagem com receita como multiconjuntos (ordem dos ingredientes ignora).
+const MERCADO: Dictionary = {
+	"arroz": {"custo": 5.0, "rendimento": 20, "nome": "Pacote de Arroz"},
+	"salmao": {"custo": 35.0, "rendimento": 10, "nome": "Salmão Inteiro"},
+	"alga": {"custo": 10.0, "rendimento": 20, "nome": "Pacote de Nori"},
+	"cebolinha": {"custo": 8.0, "rendimento": 15, "nome": "Maço de Cebolinha"},
+	"gergelim": {"custo": 12.0, "rendimento": 20, "nome": "Pote de Gergelim"},
+	"cream_cheese": {"custo": 15.0, "rendimento": 10, "nome": "Bisnaga de Cream Cheese"},
+	"massa_empanar": {"custo": 8.0, "rendimento": 10, "nome": "Pacote de Panko"}
+}
+
+## Valida montagem em sequência estrita: ordem e tamanho precisam bater.
 func montagem_confere_receita(montagem: Array, receita: Array) -> bool:
 	if montagem.size() != receita.size():
 		return false
-	var contagens: Dictionary = {}
-	for ing in montagem:
-		contagens[ing] = int(contagens.get(ing, 0)) + 1
-	for ing in receita:
-		if not contagens.has(ing):
-			return false
-		contagens[ing] = int(contagens[ing]) - 1
-	for v in contagens.values():
-		if int(v) != 0:
+
+	for i in range(receita.size()):
+		if montagem[i] != receita[i]:
 			return false
 	return true
-
-# Custos fixos para reposição de estoque em lotes.
-const CUSTO_REPOSICAO_BASICO: float = 15.0 # Custo para repor itens básicos (arroz, salmão, alga)
-const CUSTO_REPOSICAO_ESPECIAL: float = 25.0 # Custo para repor itens especiais (cebolinha, gergelim, cream cheese, etc.)
 
 # Bancada: básicos com carga inicial; especiais começam em 0 (preparo obrigatório).
 var estoque_bancada: Dictionary = {
@@ -97,10 +100,19 @@ func consumir_estoque(item: String) -> bool:
 		return true
 	return false
 
-func repor_estoque(item: String, quantidade: int, custo: float) -> bool:
+func repor_estoque(item: String) -> bool:
+	if not MERCADO.has(item):
+		return false
+
+	var dados: Dictionary = MERCADO[item]
+	var custo: float = float(dados.get("custo", 0.0))
+	var rendimento: int = int(dados.get("rendimento", 0))
+	if rendimento <= 0:
+		return false
+
 	if dinheiro_atual >= custo:
 		dinheiro_atual -= custo
-		estoque_bancada[item] = estoque_bancada.get(item, 0) + quantidade
+		estoque_bancada[item] = int(estoque_bancada.get(item, 0)) + rendimento
 		emit_signal("estoque_alterado")
 		emit_signal("status_atualizado")
 		return true

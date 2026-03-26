@@ -3,6 +3,8 @@ class_name OrderManager
 
 signal pedido_gerado(nome_cliente, fala_recepcao, nome_sushi, tempo_limite, textura_cliente)
 signal ingrediente_adicionado(ingrediente)
+signal montagem_atualizada(array_montagem_atual)
+signal montagem_limpa()
 signal pedido_entregue(sucesso, dinheiro_ganho, estrelas)
 signal tempo_esgotado()
 signal expediente_encerrado()
@@ -68,7 +70,7 @@ func gerar_novo_pedido() -> void:
 
 	var nomes_no_combo: Array[String] = []
 	receita_esperada.clear()
-	montagem_atual.clear()
+	limpar_montagem()
 
 	for i in range(qtd_itens):
 		var escolha: String
@@ -107,6 +109,11 @@ func adicionar_ingrediente(ingrediente: String) -> void:
 	if not cliente_ativo: return
 	montagem_atual.append(ingrediente)
 	emit_signal("ingrediente_adicionado", ingrediente)
+	emit_signal("montagem_atualizada", montagem_atual.duplicate())
+
+func limpar_montagem() -> void:
+	montagem_atual.clear()
+	emit_signal("montagem_limpa")
 
 func entregar_pedido() -> void:
 	if not cliente_ativo: return
@@ -136,6 +143,7 @@ func entregar_pedido() -> void:
 	
 	pedidos_atendidos_hoje += 1
 	emit_signal("pedido_entregue", sucesso_perfeito, dinheiro_ganho, estrelas_ganhas)
+	limpar_montagem()
 
 func _on_timer_timeout() -> void:
 	if not cliente_ativo: return
@@ -145,6 +153,7 @@ func _on_timer_timeout() -> void:
 	GameManager.processar_reputacao(-1.5)
 	pedidos_atendidos_hoje += 1
 	emit_signal("tempo_esgotado")
+	limpar_montagem()
 
 # Função para identificar a receita mais “crítica” para o jogador
 # (o Jôw mira o ingrediente com MENOR estoque entre as receitas possíveis)

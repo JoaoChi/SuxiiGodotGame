@@ -32,7 +32,9 @@ func _iniciar_fritura() -> void:
 	tween.finished.connect(_on_fritura_finalizada.bind(barra))
 
 func _on_fritura_finalizada(barra: ProgressBar) -> void:
-	var _sucesso := GameManager.repor_estoque("massa_empanar", 10, GameManager.CUSTO_REPOSICAO_ESPECIAL)
+	var sucesso := GameManager.repor_estoque("massa_empanar")
+	if not sucesso:
+		print("Dinheiro insuficiente para comprar Pacote de Panko!")
 	_ocupado = false
 	if barra:
 		barra.visible = false

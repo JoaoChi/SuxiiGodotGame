@@ -25,6 +25,8 @@ const TEXTURAS_SUSHIS: Dictionary = {
 @onready var progress_bar_prep: ProgressBar = $VBoxContainer/HBoxPreparo/ProgressBarPrep
 @onready var vbox_fritura: Control = $VBoxContainer/HBoxBancadaEFritura/VBoxFritura
 @onready var painel_game_over = $PainelGameOver
+@onready var vbox_ingredientes: VBoxContainer = $DockIngredientes/VBoxIngredientes
+@onready var dock_ingredientes: Control = $DockIngredientes
 
 enum EstadoTurno { PREPARANDO, ABERTO, FECHADO }
 var estado_atual: EstadoTurno = EstadoTurno.PREPARANDO
@@ -37,9 +39,15 @@ func _ready() -> void:
 	GameManager.estoque_alterado.connect(_on_estoque_alterado)
 	order_manager.pedido_gerado.connect(_on_pedido_gerado)
 	order_manager.ingrediente_adicionado.connect(_on_ingrediente_adicionado)
+	order_manager.montagem_atualizada.connect(_on_montagem_atualizada)
+	order_manager.montagem_limpa.connect(_on_montagem_limpa)
 	order_manager.pedido_entregue.connect(_on_pedido_entregue)
 	order_manager.tempo_esgotado.connect(_on_tempo_esgotado)
 	order_manager.expediente_encerrado.connect(_on_expediente_encerrado)
+
+	_injetar_feedback_montagem_e_lixeira()
+	_injetar_botoes_ferramentas()
+	_atualizar_textos_botoes_preparo()
 	
 	painel_resumo.hide()
 	painel_loja.hide()
@@ -56,6 +64,81 @@ func _ready() -> void:
 	painel_game_over.hide()
 	_jogo_finalizado = false
 	preparar_novo_dia()
+
+func _injetar_feedback_montagem_e_lixeira() -> void:
+	if not is_instance_valid(dock_ingredientes):
+		return
+
+	if dock_ingredientes.get_node_or_null("LabelMontagemAtual") == null:
+		var label_montagem := Label.new()
+		label_montagem.name = "LabelMontagemAtual"
+		label_montagem.text = "Montagem: -"
+		label_montagem.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label_montagem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		dock_ingredientes.add_child(label_montagem)
+		dock_ingredientes.move_child(label_montagem, 0)
+
+	if get_node_or_null("VBoxContainer/BtnLixeira") == null:
+		var btn_lixeira := Button.new()
+		btn_lixeira.name = "BtnLixeira"
+		btn_lixeira.text = "🗑️ Jogar Fora"
+		btn_lixeira.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var btn_entregar: Button = get_node_or_null("VBoxContainer/BtnEntregar") as Button
+		var vbox_principal: VBoxContainer = get_node_or_null("VBoxContainer") as VBoxContainer
+		if is_instance_valid(vbox_principal):
+			vbox_principal.add_child(btn_lixeira)
+			if is_instance_valid(btn_entregar):
+				vbox_principal.move_child(btn_lixeira, btn_entregar.get_index() + 1)
+		btn_lixeira.pressed.connect(_on_lixeira_pressed)
+
+func _injetar_botoes_ferramentas() -> void:
+	if not is_instance_valid(vbox_ingredientes):
+		return
+
+	_criar_botao_ferramenta("btn_faca", "Cortar", "faca")
+	_criar_botao_ferramenta("btn_esteira", "Enrolar", "esteira")
+	_criar_botao_ferramenta("btn_fritadeira", "Fritar", "fritadeira")
+
+func _criar_botao_ferramenta(nome_no: String, texto: String, token: String) -> void:
+	# Evita duplicar botões quando a cena recarrega.
+	if vbox_ingredientes.get_node_or_null(nome_no) != null:
+		return
+
+	var botao := Button.new()
+	botao.name = nome_no
+	botao.text = texto
+	botao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	botao.mouse_filter = Control.MOUSE_FILTER_STOP
+	botao.pressed.connect(_on_ferramenta_pressed.bind(token))
+	vbox_ingredientes.add_child(botao)
+
+func _on_ferramenta_pressed(ferramenta: String) -> void:
+	if not is_instance_valid(order_manager):
+		return
+	order_manager.adicionar_ingrediente(ferramenta)
+
+func _atualizar_textos_botoes_preparo() -> void:
+	var mapeamento_botoes: Dictionary = {
+		"arroz": "VBoxContainer/HBoxPreparo/BtnPrepArroz",
+		"salmao": "VBoxContainer/HBoxPreparo/BtnPrepSalmao",
+		"alga": "VBoxContainer/HBoxPreparo/BtnPrepAlga",
+		"cebolinha": "VBoxContainer/HBoxPreparo/BtnPrepCebolinha",
+		"gergelim": "VBoxContainer/HBoxPreparo/BtnPrepGergelim",
+		"cream_cheese": "VBoxContainer/HBoxPreparo/BtnPrepCreamCheese",
+		"massa_empanar": "VBoxContainer/HBoxPreparo/BtnPrepMassaEmpanar"
+	}
+
+	for item in mapeamento_botoes.keys():
+		if not GameManager.MERCADO.has(item):
+			continue
+		var botao: Button = get_node_or_null(mapeamento_botoes[item]) as Button
+		if botao == null:
+			continue
+
+		var dados: Dictionary = GameManager.MERCADO[item]
+		var nome_insumo: String = str(dados.get("nome", item))
+		var custo: float = float(dados.get("custo", 0.0))
+		botao.text = "%s\n($%.0f)" % [nome_insumo, custo]
 
 func _process(_delta: float) -> void:
 	# Feedback visual do tempo do pedido atual.
@@ -126,6 +209,7 @@ func _atualizar_visibilidade_ingredientes_e_preparo() -> void:
 func _atualizar_visibilidade_controles_turno() -> void:
 	# Esconde ações que não fazem sentido no estado atual (ex.: Entregar com restaurante fechado).
 	var btn_entregar: Button = $VBoxContainer/BtnEntregar
+	var btn_lixeira: Button = get_node_or_null("VBoxContainer/BtnLixeira") as Button
 	var hbox_ing: Control = $DockIngredientes
 	var grupo_preparo_bancada: Array[Control] = [
 		$VBoxContainer/MarginContainerEstoque,
@@ -137,6 +221,8 @@ func _atualizar_visibilidade_controles_turno() -> void:
 
 	if _jogo_finalizado:
 		btn_entregar.hide()
+		if is_instance_valid(btn_lixeira):
+			btn_lixeira.hide()
 		btn_entregar.disabled = false
 		hbox_ing.hide()
 		for n in grupo_preparo_bancada:
@@ -146,6 +232,8 @@ func _atualizar_visibilidade_controles_turno() -> void:
 	var painel_bloqueando: bool = painel_resumo.visible or painel_loja.visible
 	if painel_bloqueando:
 		btn_entregar.hide()
+		if is_instance_valid(btn_lixeira):
+			btn_lixeira.hide()
 		btn_entregar.disabled = false
 		hbox_ing.hide()
 		for n in grupo_preparo_bancada:
@@ -158,15 +246,21 @@ func _atualizar_visibilidade_controles_turno() -> void:
 	match estado_atual:
 		EstadoTurno.PREPARANDO:
 			btn_entregar.hide()
+			if is_instance_valid(btn_lixeira):
+				btn_lixeira.hide()
 			btn_entregar.disabled = false
 			hbox_ing.hide()
 		EstadoTurno.ABERTO:
 			var em_pedido: bool = order_manager.cliente_ativo
 			btn_entregar.visible = em_pedido
+			if is_instance_valid(btn_lixeira):
+				btn_lixeira.visible = em_pedido
 			btn_entregar.disabled = false
 			hbox_ing.visible = em_pedido
 		EstadoTurno.FECHADO:
 			btn_entregar.hide()
+			if is_instance_valid(btn_lixeira):
+				btn_lixeira.hide()
 			btn_entregar.disabled = false
 			hbox_ing.hide()
 			for n in grupo_preparo_bancada:
@@ -180,12 +274,14 @@ func _set_botoes_preparo_desabilitados(desabilitar: bool) -> void:
 		if c is Button:
 			(c as Button).disabled = desabilitar
 
-func _iniciar_preparo(item: String, segundos: float = 3.0, quantidade: int = 10) -> void:
+func _iniciar_preparo(item: String, segundos: float = 3.0) -> void:
 	if _jogo_finalizado:
 		return
 	if _prep_em_andamento:
 		return
 	if not GameManager.ingredientes_desbloqueados.get(item, false):
+		return
+	if not GameManager.MERCADO.has(item):
 		return
 	_prep_em_andamento = true
 	_set_botoes_preparo_desabilitados(true)
@@ -198,13 +294,14 @@ func _iniciar_preparo(item: String, segundos: float = 3.0, quantidade: int = 10)
 		100.0,
 		segundos
 	)
-	tween_prep.finished.connect(_finalizar_preparo.bind(item, quantidade))
+	tween_prep.finished.connect(_finalizar_preparo.bind(item))
 
-func _finalizar_preparo(item: String, quantidade: int) -> void:
-	var custo := GameManager.CUSTO_REPOSICAO_BASICO if item in ["arroz", "salmao", "alga"] else GameManager.CUSTO_REPOSICAO_ESPECIAL
-	var sucesso := GameManager.repor_estoque(item, quantidade, custo)
+func _finalizar_preparo(item: String) -> void:
+	var sucesso := GameManager.repor_estoque(item)
 	if not sucesso:
-		print("Dinheiro insuficiente para repor estoque!")
+		var dados_item: Dictionary = GameManager.MERCADO.get(item, {})
+		var nome_item: String = str(dados_item.get("nome", item))
+		print("Dinheiro insuficiente para comprar: %s" % nome_item)
 	progress_bar_prep.visible = false
 	_set_botoes_preparo_desabilitados(false)
 	_prep_em_andamento = false
@@ -279,6 +376,47 @@ func _on_ingrediente_adicionado(_ing: String) -> void:
 		_mostrar_sushi_finalizado(_nome_receita_para_arte_sushi_pronto())
 	else:
 		_esconder_sushi_pronto()
+
+func _on_montagem_atualizada(array_montagem_atual: Array) -> void:
+	var label_montagem: Label = dock_ingredientes.get_node_or_null("LabelMontagemAtual") as Label
+	if not is_instance_valid(label_montagem):
+		return
+	label_montagem.text = "Montagem: %s" % _formatar_montagem_para_label(array_montagem_atual)
+
+func _on_montagem_limpa() -> void:
+	var label_montagem: Label = dock_ingredientes.get_node_or_null("LabelMontagemAtual") as Label
+	if not is_instance_valid(label_montagem):
+		return
+	label_montagem.text = "Montagem: -"
+
+func _on_lixeira_pressed() -> void:
+	if not is_instance_valid(order_manager):
+		return
+	order_manager.limpar_montagem()
+	_on_montagem_limpa()
+
+func _formatar_montagem_para_label(montagem: Array) -> String:
+	if montagem.is_empty():
+		return "-"
+	var partes: PackedStringArray = []
+	for item in montagem:
+		partes.append(_nome_legivel_item(str(item)))
+	return " > ".join(partes)
+
+func _nome_legivel_item(item: String) -> String:
+	var nomes_legiveis: Dictionary = {
+		"alga": "Alga",
+		"arroz": "Arroz",
+		"salmao": "Salmao",
+		"cebolinha": "Cebolinha",
+		"gergelim": "Gergelim",
+		"cream_cheese": "Cream Cheese",
+		"massa_empanar": "Massa Empanar",
+		"faca": "Cortar",
+		"esteira": "Enrolar",
+		"fritadeira": "Fritar"
+	}
+	return str(nomes_legiveis.get(item, item.capitalize()))
 
 func _nome_receita_para_arte_sushi_pronto() -> String:
 	# Combo "Nigiri + Maki": usamos a arte do primeiro item (há uma chave em TEXTURAS_SUSHIS).
