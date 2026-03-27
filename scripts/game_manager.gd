@@ -30,6 +30,13 @@ var ingredientes_desbloqueados: Dictionary = {
 	"fritadeira": true
 }
 
+var ingredientes_comprados: Dictionary = {
+	"cebolinha": false,
+	"gergelim": false,
+	"cream_cheese": false,
+	"massa_empanar": false
+}
+
 const CUSTO_DESBLOQUEIO: Dictionary = {
 	"cebolinha": 50.0,
 	"gergelim": 75.0,
@@ -121,6 +128,35 @@ func _estoque_inicial() -> Dictionary:
 		"massa_empanar": 0,
 	}
 
+func desbloquear_ingrediente(item: String) -> void:
+	if not ingredientes_desbloqueados.has(item):
+		return
+	ingredientes_desbloqueados[item] = true
+	if ingredientes_comprados.has(item):
+		ingredientes_comprados[item] = true
+
+func _reaplicar_desbloqueios_por_dia_e_compra() -> void:
+	var dados_dia: Dictionary = get_progressao_dia()
+	var ingredientes_iniciais: Array = dados_dia.get("ingredientes_iniciais", [])
+
+	for chave in ingredientes_desbloqueados.keys():
+		ingredientes_desbloqueados[chave] = false
+
+	# Ferramentas sao permanentes e sempre habilitadas.
+	for ferramenta in ["faca", "esteira", "fritadeira"]:
+		ingredientes_desbloqueados[ferramenta] = true
+
+	# Habilita o que a progressao do dia libera.
+	for item in ingredientes_iniciais:
+		var item_str: String = str(item)
+		if ingredientes_desbloqueados.has(item_str):
+			ingredientes_desbloqueados[item_str] = true
+
+	# Mantem liberado tudo que foi comprado na loja.
+	for item in ingredientes_comprados.keys():
+		if bool(ingredientes_comprados[item]):
+			ingredientes_desbloqueados[item] = true
+
 func consumir_estoque(item: String) -> bool:
 	if item in ["faca", "esteira", "fritadeira"]:
 		return true
@@ -186,15 +222,7 @@ func resetar_dia() -> void:
 	acertos_dia = 0
 	erros_dia = 0
 
-	var dados_dia: Dictionary = get_progressao_dia()
-	var ingredientes_iniciais: Array = dados_dia.get("ingredientes_iniciais", [])
-	for chave in ingredientes_desbloqueados.keys():
-		ingredientes_desbloqueados[chave] = false
-	for item in ingredientes_iniciais:
-		var item_str: String = str(item)
-		if ingredientes_desbloqueados.has(item_str):
-			ingredientes_desbloqueados[item_str] = true
-
+	_reaplicar_desbloqueios_por_dia_e_compra()
 	estoque_bancada = _estoque_inicial()
 	emit_signal("estoque_alterado")
 

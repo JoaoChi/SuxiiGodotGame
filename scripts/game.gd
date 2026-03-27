@@ -704,7 +704,7 @@ func _tentar_comprar(item: String) -> void:
 	var custo = GameManager.CUSTO_DESBLOQUEIO[item]
 	if GameManager.dinheiro_atual >= custo:
 		GameManager.dinheiro_atual -= custo
-		GameManager.ingredientes_desbloqueados[item] = true
+		GameManager.desbloquear_ingrediente(item)
 		_atualizar_botoes_loja()
 		_atualizar_visibilidade_controles_turno()
 		atualizar_label_estoque()

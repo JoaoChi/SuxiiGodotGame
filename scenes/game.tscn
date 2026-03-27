@@ -108,79 +108,72 @@ anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -124.0
+offset_left = -144.0
 offset_top = 96.0
-offset_right = -18.0
+offset_right = -38.0
 offset_bottom = -148.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
 theme_override_constants/margin_left = 6
-theme_override_constants/margin_top = 8
+theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 6
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_bottom = 4
 
 [node name="VBoxIngredientes" type="VBoxContainer" parent="DockIngredientes" unique_id=1771760001]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 mouse_filter = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 2
 alignment = 1
 
-[node name="IngredienteArroz" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=214368726]
+[node name="IngredienteArroz" type="TextureRect" parent="DockIngredientes/VBoxIngredientes" unique_id=214368726]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 4
-color = Color(0.98, 0.97, 0.94, 1)
 script = ExtResource("3_drag")
 nome_ingrediente = "arroz"
 
-[node name="IngredienteSalmao" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1134997851]
+[node name="IngredienteSalmao" type="TextureRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1134997851]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 4
-color = Color(0.95, 0.45, 0.25, 1)
 script = ExtResource("3_drag")
 nome_ingrediente = "salmao"
 
-[node name="IngredienteAlga" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1916452637]
+[node name="IngredienteAlga" type="TextureRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1916452637]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 4
-color = Color(0.05, 0.25, 0.12, 1)
 script = ExtResource("3_drag")
 nome_ingrediente = "alga"
 
-[node name="IngredienteCebolinha" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=323497653]
+[node name="IngredienteCebolinha" type="TextureRect" parent="DockIngredientes/VBoxIngredientes" unique_id=323497653]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 4
-color = Color(0.2, 0.8, 0.2, 1)
 script = ExtResource("3_drag")
 nome_ingrediente = "cebolinha"
 
-[node name="IngredienteGergelim" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1892775484]
+[node name="IngredienteGergelim" type="TextureRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1892775484]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 4
-color = Color(0.9, 0.8, 0.6, 1)
 script = ExtResource("3_drag")
 nome_ingrediente = "gergelim"
 
-[node name="IngredienteCreamCheese" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1919205243]
+[node name="IngredienteCreamCheese" type="TextureRect" parent="DockIngredientes/VBoxIngredientes" unique_id=1919205243]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 4
-color = Color(1, 0.95, 0.9, 1)
 script = ExtResource("3_drag")
 nome_ingrediente = "cream_cheese"
 
-[node name="IngredienteMassa" type="ColorRect" parent="DockIngredientes/VBoxIngredientes" unique_id=662050921]
+[node name="IngredienteMassa" type="TextureRect" parent="DockIngredientes/VBoxIngredientes" unique_id=662050921]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
 size_flags_horizontal = 4
-color = Color(0.8, 0.5, 0.2, 1)
 script = ExtResource("3_drag")
 nome_ingrediente = "massa_empanar"
 
