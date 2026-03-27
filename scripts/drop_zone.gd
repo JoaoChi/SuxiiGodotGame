@@ -34,10 +34,12 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 
 	if not order_manager or not order_manager.cliente_ativo:
 		return
-	if not GameManager.consumir_estoque(nome_ingrediente):
-		return
 
+	# O OrderManager já valida/consome estoque; evita consumo duplicado.
+	var tamanho_antes: int = order_manager.montagem_atual.size()
 	order_manager.adicionar_ingrediente(nome_ingrediente)
+	if order_manager.montagem_atual.size() <= tamanho_antes:
+		return
 	# O sinal ingrediente_adicionado pode completar o pedido e esconder a pilha;
 	# não criar outra fatia depois disso (senão fica um ColorRect por cima do sprite).
 	if GameManager.montagem_confere_receita(order_manager.montagem_atual, order_manager.receita_esperada):

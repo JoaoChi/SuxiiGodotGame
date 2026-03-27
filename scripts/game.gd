@@ -48,6 +48,7 @@ func _ready() -> void:
 	_injetar_feedback_montagem_e_lixeira()
 	_injetar_botoes_ferramentas()
 	_atualizar_botoes_estoque_bancada()
+	_aplicar_texturas_botoes()
 	_atualizar_textos_botoes_preparo()
 	
 	painel_resumo.hide()
@@ -67,17 +68,21 @@ func _ready() -> void:
 	preparar_novo_dia()
 
 func _injetar_feedback_montagem_e_lixeira() -> void:
-	if not is_instance_valid(dock_ingredientes):
+	var vbox_principal: VBoxContainer = get_node_or_null("VBoxContainer") as VBoxContainer
+	if not is_instance_valid(vbox_principal):
 		return
 
-	if dock_ingredientes.get_node_or_null("LabelMontagemAtual") == null:
+	if vbox_principal.get_node_or_null("LabelMontagemAtual") == null:
 		var label_montagem := Label.new()
 		label_montagem.name = "LabelMontagemAtual"
 		label_montagem.text = "Montagem: -"
 		label_montagem.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label_montagem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		dock_ingredientes.add_child(label_montagem)
-		dock_ingredientes.move_child(label_montagem, 0)
+		label_montagem.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		vbox_principal.add_child(label_montagem)
+		var label_pedido_node: Control = get_node_or_null("VBoxContainer/LabelPedido") as Control
+		if is_instance_valid(label_pedido_node):
+			vbox_principal.move_child(label_montagem, label_pedido_node.get_index() + 1)
 
 	if get_node_or_null("VBoxContainer/BtnLixeira") == null:
 		var btn_lixeira := Button.new()
@@ -85,11 +90,9 @@ func _injetar_feedback_montagem_e_lixeira() -> void:
 		btn_lixeira.text = "🗑️ Jogar Fora"
 		btn_lixeira.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var btn_entregar: Button = get_node_or_null("VBoxContainer/BtnEntregar") as Button
-		var vbox_principal: VBoxContainer = get_node_or_null("VBoxContainer") as VBoxContainer
-		if is_instance_valid(vbox_principal):
-			vbox_principal.add_child(btn_lixeira)
-			if is_instance_valid(btn_entregar):
-				vbox_principal.move_child(btn_lixeira, btn_entregar.get_index() + 1)
+		vbox_principal.add_child(btn_lixeira)
+		if is_instance_valid(btn_entregar):
+			vbox_principal.move_child(btn_lixeira, btn_entregar.get_index() + 1)
 		btn_lixeira.pressed.connect(_on_lixeira_pressed)
 
 func _injetar_botoes_ferramentas() -> void:
@@ -221,6 +224,40 @@ func _atualizar_botoes_estoque_bancada() -> void:
 		var qtd: int = int(GameManager.estoque_bancada.get(item, 0))
 		botao.text = "%s [ %d ]" % [_nome_legivel_item(item), qtd]
 		botao.disabled = qtd <= 0
+
+func _aplicar_texturas_botoes() -> void:
+	if not is_instance_valid(vbox_ingredientes):
+		return
+
+	for child in vbox_ingredientes.get_children():
+		var botao: Button = child as Button
+		if botao == null or not is_instance_valid(botao):
+			continue
+
+		var item: String = _resolver_item_botao_doca(botao)
+		if item == "":
+			continue
+
+		var caminho_img: String = "res://features/ingredients/%s.png" % item
+		if not ResourceLoader.exists(caminho_img):
+			# Fallback para compatibilidade com estrutura anterior.
+			caminho_img = "res://assets/ingredientes/%s.png" % item
+		if not ResourceLoader.exists(caminho_img):
+			continue
+
+		var textura: Texture2D = load(caminho_img) as Texture2D
+		if textura == null:
+			continue
+
+		botao.icon = textura
+		botao.expand_icon = true
+
+		# Ferramentas viram apenas ícone; ingredientes mantêm só o contador como fallback visual.
+		if item in ["faca", "esteira", "fritadeira"]:
+			botao.text = ""
+		elif GameManager.MERCADO.has(item):
+			var qtd: int = int(GameManager.estoque_bancada.get(item, 0))
+			botao.text = "\n[ %d ]" % qtd
 
 func _resolver_item_botao_doca(botao: Button) -> String:
 	if not is_instance_valid(botao):
@@ -424,13 +461,13 @@ func _on_ingrediente_adicionado(_ing: String) -> void:
 		_esconder_sushi_pronto()
 
 func _on_montagem_atualizada(array_montagem_atual: Array) -> void:
-	var label_montagem: Label = dock_ingredientes.get_node_or_null("LabelMontagemAtual") as Label
+	var label_montagem: Label = get_node_or_null("VBoxContainer/LabelMontagemAtual") as Label
 	if not is_instance_valid(label_montagem):
 		return
 	label_montagem.text = "Montagem: %s" % _formatar_montagem_para_label(array_montagem_atual)
 
 func _on_montagem_limpa() -> void:
-	var label_montagem: Label = dock_ingredientes.get_node_or_null("LabelMontagemAtual") as Label
+	var label_montagem: Label = get_node_or_null("VBoxContainer/LabelMontagemAtual") as Label
 	if not is_instance_valid(label_montagem):
 		return
 	label_montagem.text = "Montagem: -"
