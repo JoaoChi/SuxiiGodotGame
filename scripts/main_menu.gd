@@ -1,11 +1,20 @@
 extends Control
 
+const VIDEO_MUTE_DB := -80.0
+
+@onready var background_video: VideoStreamPlayer = $BackgroundVideo
 @onready var video_player: VideoStreamPlayer = $ContinuarVideo
 @onready var menu_panel: PanelContainer = $PanelContainer
+
+func _ready() -> void:
+	# Mantem videos sempre sem audio.
+	background_video.volume_db = VIDEO_MUTE_DB
+	video_player.volume_db = VIDEO_MUTE_DB
 
 func _on_continuar_pressed() -> void:
 	menu_panel.visible = false
 	video_player.visible = true
+	video_player.volume_db = VIDEO_MUTE_DB
 	video_player.play()
 
 func _on_video_finished() -> void:

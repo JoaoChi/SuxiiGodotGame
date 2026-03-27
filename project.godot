@@ -17,6 +17,7 @@ config/icon="res://assets/icons/icon.svg"
 
 [autoload]
 
+BackgroundMusic="*res://scripts/background_music.gd"
 GameManager="*res://scripts/game_manager.gd"
 
 [display]

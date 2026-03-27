@@ -1,5 +1,6 @@
 extends Control
 
+const SETTINGS_SCENE: PackedScene = preload("res://scenes/settings.tscn")
 const TEXTURAS_SUSHIS: Dictionary = {
 	"Sashimi": "res://features/food/sashimi.png",
 	"Nigiri": "res://features/food/nigiri.png",
@@ -34,8 +35,11 @@ var _prep_em_andamento: bool = false
 var _jogo_finalizado: bool = false
 var _sushi_pronto_pos_inicial: Vector2
 var _entrega_em_andamento: bool = false
+var _painel_configuracoes: Control = null
+var _camada_configuracoes: CanvasLayer = null
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	GameManager.estoque_alterado.connect(_on_estoque_alterado)
 	order_manager.pedido_gerado.connect(_on_pedido_gerado)
 	order_manager.ingrediente_adicionado.connect(_on_ingrediente_adicionado)
@@ -66,6 +70,54 @@ func _ready() -> void:
 	painel_game_over.hide()
 	_jogo_finalizado = false
 	preparar_novo_dia()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_toggle_menu_configuracoes()
+		accept_event()
+
+func _toggle_menu_configuracoes() -> void:
+	if is_instance_valid(_painel_configuracoes):
+		_fechar_menu_configuracoes()
+	else:
+		_abrir_menu_configuracoes()
+
+func _abrir_menu_configuracoes() -> void:
+	var instancia := SETTINGS_SCENE.instantiate() as Control
+	if not is_instance_valid(instancia):
+		return
+
+	var camada := CanvasLayer.new()
+	camada.layer = 100
+	camada.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	add_child(camada)
+	_camada_configuracoes = camada
+
+	var fundo_bloqueio := ColorRect.new()
+	fundo_bloqueio.name = "FundoBloqueio"
+	fundo_bloqueio.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fundo_bloqueio.color = Color(0.0, 0.0, 0.0, 0.55)
+	fundo_bloqueio.mouse_filter = Control.MOUSE_FILTER_STOP
+	_camada_configuracoes.add_child(fundo_bloqueio)
+
+	_painel_configuracoes = instancia
+	_painel_configuracoes.set("voltar_para_menu_principal", false)
+	_painel_configuracoes.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_camada_configuracoes.add_child(_painel_configuracoes)
+	_painel_configuracoes.fechar_configuracoes.connect(_on_fechar_configuracoes)
+	get_tree().paused = true
+
+func _fechar_menu_configuracoes() -> void:
+	if is_instance_valid(_painel_configuracoes):
+		_painel_configuracoes.queue_free()
+	_painel_configuracoes = null
+	if is_instance_valid(_camada_configuracoes):
+		_camada_configuracoes.queue_free()
+	_camada_configuracoes = null
+	get_tree().paused = false
+
+func _on_fechar_configuracoes() -> void:
+	_fechar_menu_configuracoes()
 
 func _injetar_feedback_montagem_e_lixeira() -> void:
 	var vbox_principal: VBoxContainer = get_node_or_null("VBoxContainer") as VBoxContainer
