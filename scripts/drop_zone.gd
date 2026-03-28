@@ -71,9 +71,13 @@ func _criar_visual_ingrediente(nome: String) -> void:
 	offset_y_atual += 22.0 # Sobe a altura da pilha para a próxima fatia
 
 func _on_pedido_gerado(_nome_cliente: String, _fala_recepcao: String, _nome_sushi: String, _tempo_limite: float, _textura_cliente: Texture2D) -> void:
-	# Destrói todas as fatias da mesa para o próximo pedido
-	for child in get_children():
-		# Mantém o sprite do sushi pronto, caso exista (ele vive dentro da mesma Bancada).
+	limpar_fatias_na_bancada()
+
+
+## Remove fatias empilhadas (ColorRect) e reinicia o empilhamento; mantém [SpriteSushiPronto].
+func limpar_fatias_na_bancada() -> void:
+	var filhos: Array[Node] = get_children()
+	for child in filhos:
 		if child.name == "SpriteSushiPronto":
 			continue
 		child.queue_free()

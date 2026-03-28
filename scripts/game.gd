@@ -77,7 +77,6 @@ func _ready() -> void:
 	order_manager.expediente_encerrado.connect(_on_expediente_encerrado)
 
 	_injetar_feedback_montagem_e_lixeira()
-	_injetar_botoes_ferramentas()
 	_configurar_containers_estacoes_e_navegacao()
 	if is_instance_valid(label_status):
 		label_status.clip_contents = true
@@ -373,6 +372,8 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	var btn_lixeira_n: Node = vbox_legacy.get_node_or_null("BtnLixeira")
 	if is_instance_valid(btn_lixeira_n):
 		btn_lixeira_n.reparent(vbox_mont)
+		if btn_lixeira_n is Button:
+			(btn_lixeira_n as Button).mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var vbox_col_frit := VBoxContainer.new()
 	vbox_col_frit.name = "VBoxColunaFritura"
@@ -390,6 +391,9 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 
 	if is_instance_valid(vbox_fritura):
 		vbox_fritura.reparent(vbox_col_frit)
+
+	# Precisa rodar depois de dock_ingredientes/vbox_ingredientes existirem (antes era antes de _configurar e nunca criava os botões).
+	_injetar_botoes_ferramentas()
 
 	if is_instance_valid(vbox_ingredientes) and is_instance_valid(vbox_fritura):
 		var btn_fritadeira_n: Node = vbox_ingredientes.get_node_or_null("btn_fritadeira")
@@ -607,6 +611,8 @@ func _injetar_feedback_montagem_e_lixeira() -> void:
 		btn_lixeira.name = "BtnLixeira"
 		btn_lixeira.text = "🗑️ Jogar Fora"
 		btn_lixeira.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn_lixeira.mouse_filter = Control.MOUSE_FILTER_STOP
+		btn_lixeira.focus_mode = Control.FOCUS_NONE
 		var btn_entregar: Button = get_node_or_null("VBoxContainer/BtnEntregar") as Button
 		vbox_principal.add_child(btn_lixeira)
 		if is_instance_valid(btn_entregar):
@@ -629,6 +635,7 @@ func _criar_botao_ferramenta(nome_no: String, texto: String, token: String) -> v
 	var botao := Button.new()
 	botao.name = nome_no
 	botao.text = texto
+	botao.custom_minimum_size = Vector2(0, 44)
 	botao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	botao.mouse_filter = Control.MOUSE_FILTER_STOP
 	botao.pressed.connect(_on_ferramenta_pressed.bind(token))
@@ -1081,6 +1088,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 			btn_entregar.visible = em_pedido
 			if is_instance_valid(btn_lixeira):
 				btn_lixeira.visible = em_pedido
+				btn_lixeira.disabled = false
 			btn_entregar.disabled = false
 			if is_instance_valid(hbox_ing):
 				hbox_ing.visible = em_pedido
@@ -1244,10 +1252,16 @@ func _on_montagem_limpa() -> void:
 	label_montagem.text = "Montagem: -"
 
 func _on_lixeira_pressed() -> void:
+	if _jogo_finalizado:
+		return
 	if not is_instance_valid(order_manager):
 		return
 	order_manager.limpar_montagem()
-	_on_montagem_limpa()
+	if is_instance_valid(bancada) and bancada.has_method("limpar_fatias_na_bancada"):
+		bancada.call("limpar_fatias_na_bancada")
+	_esconder_sushi_pronto()
+	label_status.text = "Montagem limpa. Continue o pedido."
+	_atualizar_visibilidade_controles_turno()
 
 func _formatar_montagem_para_label(montagem: Array) -> String:
 	if montagem.is_empty():
