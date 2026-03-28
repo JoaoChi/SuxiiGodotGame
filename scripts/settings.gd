@@ -19,6 +19,8 @@ const RESOLUTION_OPTIONS := [
 @onready var volume_value_label: Label = $VBoxContainer/VolumeContainer/VolumeValue
 @onready var window_mode_option: OptionButton = $VBoxContainer/WindowModeContainer/WindowModeOption
 @onready var resolution_option: OptionButton = $VBoxContainer/ResolutionContainer/ResolutionOption
+@onready var btn_voltar: Button = $VBoxContainer/Voltar
+@onready var btn_menu_principal: Button = $VBoxContainer/MenuPrincipal
 
 var current_resolution_index: int = 0
 var current_window_mode: int = WINDOWED_MODE
@@ -28,9 +30,20 @@ func _ready() -> void:
 	_populate_controls()
 	_load_settings()
 	_apply_audio_volume(float(volume_slider.value))
+	call_deferred("_deferred_aplicar_video_inicial")
+	if voltar_para_menu_principal:
+		btn_voltar.text = "Voltar ao menu principal"
+		btn_menu_principal.visible = false
+	else:
+		btn_voltar.text = "Voltar ao jogo"
+		btn_menu_principal.visible = true
+
+
+func _deferred_aplicar_video_inicial() -> void:
 	_apply_window_mode(current_window_mode)
-	_apply_resolution(current_resolution_index)
 	_update_resolution_availability()
+	if current_window_mode == WINDOWED_MODE:
+		_apply_resolution(current_resolution_index)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -61,36 +74,65 @@ func _apply_audio_volume(volume_percent: float) -> void:
 	AudioServer.set_bus_volume_db(_get_music_bus_index(), db_value)
 	volume_value_label.text = "%d%%" % int(round(volume_percent))
 
+func _obter_janela_raiz() -> Window:
+	var w := get_window()
+	if w != null:
+		return w
+	var tree := get_tree()
+	if tree == null:
+		return null
+	return tree.root as Window
+
+
 func _apply_window_mode(mode_id: int) -> void:
 	current_window_mode = mode_id
+	var win := _obter_janela_raiz()
+	if win == null:
+		return
 	if mode_id == FULLSCREEN_MODE:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		win.mode = Window.MODE_FULLSCREEN
 	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		win.mode = Window.MODE_WINDOWED
+
 
 func _apply_resolution(index: int) -> void:
 	if index < 0 or index >= RESOLUTION_OPTIONS.size():
 		return
-
 	current_resolution_index = index
+	if current_window_mode == FULLSCREEN_MODE:
+		return
+	var win := _obter_janela_raiz()
+	if win == null:
+		return
 	var target_size: Vector2i = RESOLUTION_OPTIONS[index]["size"]
-	DisplayServer.window_set_size(target_size)
-
-	# Recentraliza ao aplicar resolucao em modo janela.
-	if current_window_mode == WINDOWED_MODE:
-		var screen_rect: Rect2i = DisplayServer.screen_get_usable_rect()
-		var centered_position: Vector2i = screen_rect.position + (screen_rect.size - target_size) / 2
-		DisplayServer.window_set_position(centered_position)
+	win.min_size = Vector2i(0, 0)
+	win.size = target_size
+	win.move_to_center()
 
 func _update_resolution_availability() -> void:
 	resolution_option.disabled = current_window_mode == FULLSCREEN_MODE
 
+
+func _sincronizar_estado_video_a_partir_da_ui() -> void:
+	var wi: int = window_mode_option.selected
+	if wi >= 0:
+		current_window_mode = clampi(wi, WINDOWED_MODE, FULLSCREEN_MODE)
+	var ri: int = resolution_option.selected
+	if ri >= 0:
+		current_resolution_index = clampi(ri, 0, RESOLUTION_OPTIONS.size() - 1)
+
+
 func _save_settings() -> void:
+	_sincronizar_estado_video_a_partir_da_ui()
 	var config := ConfigFile.new()
+	config.load(SETTINGS_FILE_PATH)
 	config.set_value(SETTINGS_SECTION, "music_volume", volume_slider.value)
 	config.set_value(SETTINGS_SECTION, "window_mode", current_window_mode)
 	config.set_value(SETTINGS_SECTION, "resolution_index", current_resolution_index)
-	config.save(SETTINGS_FILE_PATH)
+	var save_err: Error = config.save(SETTINGS_FILE_PATH)
+	if save_err != OK:
+		push_warning("settings: falha ao salvar settings.cfg (%d)." % save_err)
+
 
 func _load_settings() -> void:
 	var config := ConfigFile.new()
@@ -111,6 +153,7 @@ func _load_settings() -> void:
 	volume_slider.value = clampf(saved_volume, 0.0, 100.0)
 	window_mode_option.select(current_window_mode)
 	resolution_option.select(current_resolution_index)
+	_sincronizar_estado_video_a_partir_da_ui()
 
 func _on_volume_slider_value_changed(value: float) -> void:
 	_apply_audio_volume(value)
@@ -119,7 +162,16 @@ func _on_volume_slider_value_changed(value: float) -> void:
 func _on_window_mode_option_item_selected(index: int) -> void:
 	_apply_window_mode(index)
 	_update_resolution_availability()
+	if index == WINDOWED_MODE:
+		call_deferred("_deferred_reaplicar_resolucao_apos_janela")
 	_save_settings()
+
+
+func _deferred_reaplicar_resolucao_apos_janela() -> void:
+	if current_window_mode != WINDOWED_MODE:
+		return
+	_apply_resolution(current_resolution_index)
+
 
 func _on_resolution_option_item_selected(index: int) -> void:
 	_apply_resolution(index)
@@ -131,3 +183,9 @@ func _on_voltar_pressed() -> void:
 		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
 	else:
 		emit_signal("fechar_configuracoes")
+
+
+func _on_menu_principal_pressed() -> void:
+	_save_settings()
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://scenes/main_menu.tscn")

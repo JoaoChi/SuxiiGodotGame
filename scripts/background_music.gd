@@ -32,11 +32,16 @@ func _ready() -> void:
 
 	var settings: Dictionary = _load_or_create_settings()
 	_apply_saved_music_volume(float(settings.get("music_volume", 70.0)))
+	call_deferred("_deferred_aplicar_video_salvo")
+	_ensure_playing()
+
+
+func _deferred_aplicar_video_salvo() -> void:
+	var settings: Dictionary = _load_or_create_settings()
 	_apply_saved_display_settings(
 		int(settings.get("window_mode", WINDOWED_MODE)),
 		int(settings.get("resolution_index", 0))
 	)
-	_ensure_playing()
 
 func _process(_delta: float) -> void:
 	# Garante música contínua entre trocas de cena.
@@ -67,7 +72,9 @@ func _load_or_create_settings() -> Dictionary:
 	if load_status != OK:
 		for key in defaults.keys():
 			config.set_value(SETTINGS_SECTION, key, defaults[key])
-		config.save(SETTINGS_FILE_PATH)
+		var werr: Error = config.save(SETTINGS_FILE_PATH)
+		if werr != OK:
+			push_warning("BackgroundMusic: não foi possível criar settings.cfg (%d)." % werr)
 		return defaults
 
 	return {
@@ -91,13 +98,17 @@ func _apply_saved_music_volume(volume_percent: float) -> void:
 func _apply_saved_display_settings(window_mode: int, resolution_index: int) -> void:
 	var safe_window_mode: int = window_mode if window_mode in [WINDOWED_MODE, FULLSCREEN_MODE] else WINDOWED_MODE
 	var safe_resolution_index: int = clampi(resolution_index, 0, RESOLUTION_OPTIONS.size() - 1)
-	var target_size: Vector2i = RESOLUTION_OPTIONS[safe_resolution_index]
-
+	var tree := get_tree()
+	if tree == null:
+		return
+	var win := tree.root as Window
+	if win == null:
+		return
 	if safe_window_mode == FULLSCREEN_MODE:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
-	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-		DisplayServer.window_set_size(target_size)
-		var screen_rect: Rect2i = DisplayServer.screen_get_usable_rect()
-		var centered_position: Vector2i = screen_rect.position + (screen_rect.size - target_size) / 2
-		DisplayServer.window_set_position(centered_position)
+		win.mode = Window.MODE_FULLSCREEN
+		return
+	win.mode = Window.MODE_WINDOWED
+	var target_size: Vector2i = RESOLUTION_OPTIONS[safe_resolution_index]
+	win.min_size = Vector2i(0, 0)
+	win.size = target_size
+	win.move_to_center()
