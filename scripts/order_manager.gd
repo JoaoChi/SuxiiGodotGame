@@ -16,6 +16,8 @@ var cliente_ativo: bool = false
 ## Só após aceitar no balcão o timer corre e a montagem consome ingredientes.
 var pedido_aceito: bool = false
 var tempo_limite_atual: float = 0.0
+## Última fala exibida no balcão (persistência / restauração de UI).
+var ultima_fala_recepcao: String = ""
 var timer_pedido: Timer
 
 var pedidos_atendidos_hoje: int = 0
@@ -95,6 +97,7 @@ func gerar_novo_pedido() -> void:
 
 	pedido_atual_nome = " + ".join(nomes_no_combo)
 	var fala = cliente_atual.falas_recepcao.pick_random() % pedido_atual_nome
+	ultima_fala_recepcao = fala
 	cliente_ativo = true
 
 	# A paciência base escala por dia (modo infinito usa o último dia configurado).
@@ -232,3 +235,90 @@ func _get_receitas_possiveis(receitas_liberadas: Array = []) -> Array:
 		if pode:
 			possiveis.append(nome)
 	return possiveis
+
+
+func _tipo_cliente_atual() -> String:
+	if cliente_atual == null:
+		return "ClienteAmanda"
+	if cliente_atual is ClienteJow:
+		return "ClienteJow"
+	if cliente_atual is ClienteJoao:
+		return "ClienteJoao"
+	if cliente_atual is ClienteGabriela:
+		return "ClienteGabriela"
+	if cliente_atual is ClienteCasal:
+		return "ClienteCasal"
+	return "ClienteAmanda"
+
+
+func _instanciar_cliente_por_tipo(tipo: String) -> ClienteData:
+	match tipo:
+		"ClienteJow":
+			return ClienteJow.new()
+		"ClienteJoao":
+			return ClienteJoao.new()
+		"ClienteGabriela":
+			return ClienteGabriela.new()
+		"ClienteCasal":
+			return ClienteCasal.new()
+		_:
+			return ClienteAmanda.new()
+
+
+func tempo_restante_no_timer() -> float:
+	if timer_pedido == null:
+		return 0.0
+	if timer_pedido.is_stopped():
+		return 0.0
+	return timer_pedido.time_left
+
+
+func para_dicionario_save() -> Dictionary:
+	var rec: Array = []
+	for x in receita_esperada:
+		rec.append(str(x))
+	var mont: Array = []
+	for x in montagem_atual:
+		mont.append(str(x))
+	return {
+		"pedido_atual_nome": pedido_atual_nome,
+		"receita_esperada": rec,
+		"montagem_atual": mont,
+		"cliente_ativo": cliente_ativo,
+		"pedido_aceito": pedido_aceito,
+		"tempo_limite_atual": tempo_limite_atual,
+		"tempo_restante_timer": tempo_restante_no_timer(),
+		"pedidos_atendidos_hoje": pedidos_atendidos_hoje,
+		"meta_pedidos_dia": meta_pedidos_dia,
+		"cliente_tipo": _tipo_cliente_atual(),
+		"ultima_fala_recepcao": ultima_fala_recepcao
+	}
+
+
+func aplicar_dicionario_save(d: Dictionary) -> void:
+	if d.is_empty():
+		return
+	pedido_atual_nome = str(d.get("pedido_atual_nome", ""))
+	receita_esperada.clear()
+	var rec_v: Variant = d.get("receita_esperada", [])
+	if typeof(rec_v) == TYPE_ARRAY:
+		for x in rec_v:
+			receita_esperada.append(str(x))
+	montagem_atual.clear()
+	var mont_v: Variant = d.get("montagem_atual", [])
+	if typeof(mont_v) == TYPE_ARRAY:
+		for x in mont_v:
+			montagem_atual.append(str(x))
+	cliente_ativo = bool(d.get("cliente_ativo", false))
+	pedido_aceito = bool(d.get("pedido_aceito", false))
+	tempo_limite_atual = float(d.get("tempo_limite_atual", 0.0))
+	pedidos_atendidos_hoje = int(d.get("pedidos_atendidos_hoje", 0))
+	meta_pedidos_dia = int(d.get("meta_pedidos_dia", 0))
+	ultima_fala_recepcao = str(d.get("ultima_fala_recepcao", ""))
+	var tipo_cli := str(d.get("cliente_tipo", "ClienteAmanda"))
+	cliente_atual = _instanciar_cliente_por_tipo(tipo_cli)
+	if timer_pedido != null:
+		timer_pedido.stop()
+	var trest := float(d.get("tempo_restante_timer", 0.0))
+	if cliente_ativo and pedido_aceito and trest > 0.05 and timer_pedido != null:
+		timer_pedido.start(trest)

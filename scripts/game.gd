@@ -103,7 +103,7 @@ func _ready() -> void:
 	GameManager.restaurante_falido.connect(_on_restaurante_falido)
 	painel_game_over.hide()
 	_jogo_finalizado = false
-	preparar_novo_dia()
+	_ingresso_cena_jogo()
 
 
 func _criar_container_estacao(nome: String) -> Control:
@@ -507,6 +507,7 @@ func _on_btn_aceitar_pedido_pressed() -> void:
 	_definir_instrucao_balcao("", false)
 	label_status.text = "Montando... (0 itens)"
 	_atualizar_visibilidade_controles_turno()
+	_persistir_save()
 
 
 func _on_btn_negar_pedido_pressed() -> void:
@@ -707,7 +708,11 @@ func preparar_novo_dia() -> void:
 		return
 	estado_atual = EstadoTurno.PREPARANDO
 	GameManager.resetar_dia()
+	_atualizar_ui_preparacao_turno()
+	_persistir_save()
 
+
+func _atualizar_ui_preparacao_turno() -> void:
 	if is_instance_valid(label_pedido):
 		label_pedido.text = "Dia %d - Restaurante Fechado\nDinheiro Disponível: R$ %.2f" % [GameManager.dia_atual, GameManager.dinheiro_atual]
 	label_status.text = "Prepare sua bancada."
@@ -721,6 +726,174 @@ func preparar_novo_dia() -> void:
 	atualizar_hud()
 	atualizar_label_estoque()
 	_atualizar_visibilidade_controles_turno()
+
+
+func _ingresso_cena_jogo() -> void:
+	var entrada: String = GameManager.modo_entrada
+	GameManager.modo_entrada = ""
+	match entrada:
+		"novo_jogo":
+			GameManager.apagar_save()
+			GameManager.resetar_para_novo_jogo()
+			preparar_novo_dia()
+		"continuar":
+			var dados: Dictionary = GameManager.ler_save()
+			if dados.is_empty() or typeof(dados.get("game_manager", null)) != TYPE_DICTIONARY:
+				GameManager.resetar_para_novo_jogo()
+				preparar_novo_dia()
+			else:
+				_restaurar_de_save(dados)
+		_:
+			if GameManager.tem_save():
+				_restaurar_de_save(GameManager.ler_save())
+			else:
+				preparar_novo_dia()
+
+
+func _coletar_dados_save() -> Dictionary:
+	return {
+		"game_manager": GameManager.para_dicionario_save(),
+		"order": order_manager.para_dicionario_save(),
+		"estado_turno": int(estado_atual),
+		"jogo_finalizado": _jogo_finalizado,
+		"painel_resumo_visivel": painel_resumo.visible,
+		"painel_loja_visivel": painel_loja.visible,
+		"painel_game_over_visivel": painel_game_over.visible
+	}
+
+
+func _persistir_save() -> void:
+	if not is_inside_tree():
+		return
+	GameManager.gravar_save(_coletar_dados_save())
+
+
+func _refrescar_ui_pedido_ativo() -> void:
+	if not order_manager.cliente_ativo or order_manager.cliente_atual == null:
+		return
+	var nome_c: String = order_manager.cliente_atual.nome
+	var fala: String = order_manager.ultima_fala_recepcao
+	if fala.is_empty():
+		fala = "…"
+	if is_instance_valid(label_dialogo):
+		label_dialogo.text = "[%s]: \"%s\"" % [nome_c, fala]
+	if is_instance_valid(label_pedido):
+		label_pedido.text = "Receita: %s" % order_manager.pedido_atual_nome
+	_atualizar_texto_lista_ingredientes_pedido(
+		"Ingredientes esperados: %s" % str(order_manager.receita_esperada),
+		true
+	)
+	if order_manager.pedido_aceito:
+		label_status.text = "Montando... (%d itens)" % order_manager.montagem_atual.size()
+		_definir_instrucao_balcao("", false)
+	else:
+		label_status.text = "Pedido no balcão"
+		_definir_instrucao_balcao("Aceite o pedido para iniciar o preparo e contar o tempo.", true)
+	var tex: Texture2D = order_manager.cliente_atual.textura_pixel_art
+	if tex != null:
+		_aplicar_textura_cliente(tex)
+	else:
+		var placeholder := PlaceholderTexture2D.new()
+		if is_instance_valid(sprite_cliente):
+			placeholder.size = sprite_cliente.custom_minimum_size
+		else:
+			placeholder.size = Vector2(280, 380)
+		_aplicar_textura_cliente(placeholder)
+	_on_montagem_atualizada(order_manager.montagem_atual.duplicate())
+	if GameManager.montagem_confere_receita(order_manager.montagem_atual, order_manager.receita_esperada):
+		_mostrar_sushi_finalizado(_nome_receita_para_arte_sushi_pronto())
+	else:
+		_esconder_sushi_pronto()
+
+
+func _restaurar_ui_aberto() -> void:
+	if is_instance_valid(btn_abrir):
+		btn_abrir.hide()
+	if order_manager.cliente_ativo:
+		_refrescar_ui_pedido_ativo()
+	else:
+		if is_instance_valid(label_pedido):
+			label_pedido.text = "Restaurante Aberto!"
+		label_status.text = "Aguardando o próximo cliente..."
+		if is_instance_valid(label_dialogo):
+			label_dialogo.text = ""
+		_limpar_textura_cliente_sprite()
+		_atualizar_texto_lista_ingredientes_pedido("", false)
+		_definir_instrucao_balcao("", false)
+		_esconder_sushi_pronto()
+
+
+func _restaurar_de_save(dados: Dictionary) -> void:
+	var gm: Variant = dados.get("game_manager", {})
+	if typeof(gm) == TYPE_DICTIONARY:
+		GameManager.aplicar_dicionario_save(gm)
+	var ord: Variant = dados.get("order", {})
+	if typeof(ord) == TYPE_DICTIONARY:
+		order_manager.aplicar_dicionario_save(ord)
+	var et_raw: int = clampi(int(dados.get("estado_turno", 0)), 0, 2)
+	match et_raw:
+		0:
+			estado_atual = EstadoTurno.PREPARANDO
+		1:
+			estado_atual = EstadoTurno.ABERTO
+		2:
+			estado_atual = EstadoTurno.FECHADO
+		_:
+			estado_atual = EstadoTurno.PREPARANDO
+	_jogo_finalizado = bool(dados.get("jogo_finalizado", false))
+	painel_resumo.visible = bool(dados.get("painel_resumo_visivel", false))
+	painel_loja.visible = bool(dados.get("painel_loja_visivel", false))
+	painel_game_over.visible = bool(dados.get("painel_game_over_visivel", false))
+
+	if _jogo_finalizado and painel_game_over.visible:
+		if is_instance_valid(order_manager.timer_pedido):
+			order_manager.timer_pedido.stop()
+		painel_resumo.hide()
+		painel_loja.hide()
+		if is_instance_valid(_barra_navegacao_estacoes):
+			_barra_navegacao_estacoes.hide()
+		if is_instance_valid(btn_abrir):
+			btn_abrir.hide()
+		_set_botoes_preparo_desabilitados(true)
+		$PainelGameOver/VBox/LabelEstatisticas.text = "Dias sobrevividos: %d\nDinheiro acumulado: R$ %.2f" % [GameManager.dia_atual, GameManager.dinheiro_atual]
+		$PainelGameOver/VBox/LabelMotivo.text = "A sua reputação chegou a zero. O Su XIII fechou as portas."
+		if order_manager.cliente_atual is ClienteJow:
+			$PainelGameOver/VBox/LabelMotivo.text = "O Jôw espalhou boatos terríveis sobre a sua comida. Você faliu!"
+	elif painel_resumo.visible:
+		painel_loja.hide()
+		painel_game_over.hide()
+		estado_atual = EstadoTurno.FECHADO
+		label_resumo.text = "Fim do Dia %d\n\nFaturamento: R$ %.2f\nPedidos Perfeitos: %d\nErros/Perdas: %d" % [GameManager.dia_atual, GameManager.faturamento_dia, GameManager.acertos_dia, GameManager.erros_dia]
+	elif painel_loja.visible:
+		painel_resumo.hide()
+		painel_game_over.hide()
+		estado_atual = EstadoTurno.FECHADO
+		_atualizar_botoes_loja()
+	elif estado_atual == EstadoTurno.PREPARANDO:
+		painel_resumo.hide()
+		painel_loja.hide()
+		painel_game_over.hide()
+		_atualizar_ui_preparacao_turno()
+	elif estado_atual == EstadoTurno.ABERTO:
+		painel_resumo.hide()
+		painel_loja.hide()
+		painel_game_over.hide()
+		_restaurar_ui_aberto()
+	else:
+		painel_resumo.hide()
+		painel_loja.hide()
+		painel_game_over.hide()
+		_atualizar_ui_preparacao_turno()
+
+	atualizar_hud()
+	atualizar_label_estoque()
+	_atualizar_botoes_estoque_bancada()
+	_atualizar_visibilidade_controles_turno()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_persistir_save()
 
 func _on_estoque_alterado() -> void:
 	atualizar_label_estoque()
@@ -998,6 +1171,7 @@ func abrir_restaurante() -> void:
 	_definir_instrucao_balcao("", false)
 	_atualizar_visibilidade_controles_turno()
 	get_tree().create_timer(1.5).timeout.connect(order_manager.iniciar_expediente)
+	_persistir_save()
 
 func atualizar_hud() -> void:
 	label_hud.text = "Dinheiro: R$ %.2f | Reputação: %.1f | Combo: %d" % [GameManager.dinheiro_atual, GameManager.reputacao, GameManager.combos_consecutivos]
@@ -1221,6 +1395,7 @@ func _on_pedido_entregue(sucesso: bool, dinheiro: float, estrelas: float) -> voi
 	atualizar_hud()
 	_limpar_pilha_visual()
 	_atualizar_visibilidade_controles_turno()
+	_persistir_save()
 	get_tree().create_timer(2.0).timeout.connect(order_manager.gerar_novo_pedido)
 
 func _on_tempo_esgotado() -> void:
@@ -1236,6 +1411,7 @@ func _on_tempo_esgotado() -> void:
 	atualizar_hud()
 	_limpar_pilha_visual()
 	_atualizar_visibilidade_controles_turno()
+	_persistir_save()
 	get_tree().create_timer(2.0).timeout.connect(order_manager.gerar_novo_pedido)
 
 func _on_expediente_encerrado() -> void:
@@ -1251,6 +1427,7 @@ func _on_expediente_encerrado() -> void:
 	label_resumo.text = "Fim do Dia %d\n\nFaturamento: R$ %.2f\nPedidos Perfeitos: %d\nErros/Perdas: %d" % [GameManager.dia_atual, GameManager.faturamento_dia, GameManager.acertos_dia, GameManager.erros_dia]
 	painel_resumo.show()
 	_atualizar_visibilidade_controles_turno()
+	_persistir_save()
 
 func _on_btn_abrir_pressed() -> void:
 	abrir_restaurante()
@@ -1291,6 +1468,7 @@ func _on_btn_proximo_dia_pressed() -> void:
 	painel_loja.show()
 	_atualizar_botoes_loja()
 	_atualizar_visibilidade_controles_turno()
+	_persistir_save()
 
 func _atualizar_botoes_loja() -> void:
 	$PainelLoja/VBox/LabelTituloLoja.text = "Loja - Saldo: R$ %.2f" % GameManager.dinheiro_atual
@@ -1320,6 +1498,7 @@ func _tentar_comprar(item: String) -> void:
 		_atualizar_visibilidade_controles_turno()
 		atualizar_label_estoque()
 		atualizar_hud()
+		_persistir_save()
 
 func _on_btn_comprar_cebolinha_pressed() -> void: _tentar_comprar("cebolinha")
 func _on_btn_comprar_gergelim_pressed() -> void: _tentar_comprar("gergelim")
@@ -1360,11 +1539,9 @@ func _on_restaurante_falido() -> void:
 		$PainelGameOver/VBox/LabelMotivo.text = "O Jôw espalhou boatos terríveis sobre a sua comida. Você faliu!"
 	
 	painel_game_over.show()
+	_persistir_save()
 
 func _on_btn_reiniciar_pressed() -> void:
-	# Reset total do singleton para o estado de "Novo Jogo"
-	GameManager.dinheiro_atual = 0.0
-	GameManager.reputacao = 5.0
-	GameManager.dia_atual = 1
-	# Opcional: resetar ingredientes_desbloqueados para o padrão inicial
+	GameManager.apagar_save()
+	GameManager.resetar_para_novo_jogo()
 	get_tree().reload_current_scene()

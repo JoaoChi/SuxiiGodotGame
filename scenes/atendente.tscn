@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://b3x5parn40d6t"]
+[gd_scene format=3 uid="uid://bkh658ghrv130"]
 
 [ext_resource type="Script" path="res://scripts/atendente.gd" id="1_atendente"]
 [ext_resource type="Texture2D" uid="uid://cbca0ildvv128" path="res://assets/textures/visao_atendente(1).jpg" id="2_texture"]
@@ -10,18 +10,6 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.9, 0.6, 0.15, 0.9)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
-bg_color = Color(0.35, 0.2, 0.08, 0.98)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 0.75, 0.35, 1)
 corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
@@ -39,7 +27,19 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="Atendente" type="Control"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+bg_color = Color(0.35, 0.2, 0.08, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 0.75, 0.35, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="Atendente" type="Control" unique_id=1392339775]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,18 +48,19 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_atendente")
 
-[node name="TextureRect" type="TextureRect" parent="."]
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1178517705]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+texture = ExtResource("2_texture")
 expand_mode = 1
 stretch_mode = 6
-texture = ExtResource("2_texture")
 
-[node name="Iniciar" type="Button" parent="."]
+[node name="Iniciar" type="Button" parent="." unique_id=171033101]
+custom_minimum_size = Vector2(200, 50)
 layout_mode = 1
 anchors_preset = 7
 anchor_left = 0.5
@@ -72,13 +73,12 @@ offset_right = 100.0
 offset_bottom = -30.0
 grow_horizontal = 2
 grow_vertical = 0
-custom_minimum_size = Vector2(200, 50)
 theme_override_colors/font_color = Color(0.95, 0.75, 0.35, 1)
-theme_override_colors/font_hover_color = Color(1, 0.9, 0.6, 1)
 theme_override_colors/font_pressed_color = Color(0.85, 0.65, 0.25, 1)
+theme_override_colors/font_hover_color = Color(1, 0.9, 0.6, 1)
 theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "Iniciar"
 
 [connection signal="pressed" from="Iniciar" to="." method="_on_iniciar_pressed"]

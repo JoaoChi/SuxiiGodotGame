@@ -1,5 +1,11 @@
 extends Node
 
+const SAVE_PATH := "user://suxii_save.json"
+const SAVE_VERSION := 1
+
+## Definido pelo menu antes de trocar para a cena do jogo: "novo_jogo", "continuar" ou "".
+var modo_entrada: String = ""
+
 signal estoque_alterado
 signal restaurante_falido # Novo sinal
 signal status_atualizado
@@ -229,3 +235,120 @@ func resetar_dia() -> void:
 func avancar_dia() -> void:
 	dia_atual += 1
 	resetar_dia()
+
+
+func tem_save() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+
+func apagar_save() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	var dir := DirAccess.open("user://")
+	if dir != null:
+		dir.remove(SAVE_PATH.get_file())
+
+
+func resetar_para_novo_jogo() -> void:
+	dinheiro_atual = 0.0
+	reputacao = 5.0
+	dia_atual = 1
+	combos_consecutivos = 0
+	faturamento_dia = 0.0
+	acertos_dia = 0
+	erros_dia = 0
+	ingredientes_desbloqueados = {
+		"arroz": true,
+		"salmao": true,
+		"alga": true,
+		"cebolinha": false,
+		"gergelim": false,
+		"cream_cheese": false,
+		"massa_empanar": false,
+		"faca": true,
+		"esteira": true,
+		"fritadeira": true
+	}
+	ingredientes_comprados = {
+		"cebolinha": false,
+		"gergelim": false,
+		"cream_cheese": false,
+		"massa_empanar": false
+	}
+	estoque_bancada = _estoque_inicial()
+	_reaplicar_desbloqueios_por_dia_e_compra()
+	emit_signal("estoque_alterado")
+	emit_signal("status_atualizado")
+
+
+func para_dicionario_save() -> Dictionary:
+	return {
+		"dinheiro_atual": dinheiro_atual,
+		"reputacao": reputacao,
+		"dia_atual": dia_atual,
+		"combos_consecutivos": combos_consecutivos,
+		"faturamento_dia": faturamento_dia,
+		"acertos_dia": acertos_dia,
+		"erros_dia": erros_dia,
+		"ingredientes_desbloqueados": ingredientes_desbloqueados.duplicate(true),
+		"ingredientes_comprados": ingredientes_comprados.duplicate(true),
+		"estoque_bancada": estoque_bancada.duplicate(true)
+	}
+
+
+func aplicar_dicionario_save(d: Dictionary) -> void:
+	if d.is_empty():
+		return
+	dinheiro_atual = float(d.get("dinheiro_atual", 0.0))
+	reputacao = clampf(float(d.get("reputacao", 5.0)), 0.0, 5.0)
+	dia_atual = maxi(1, int(d.get("dia_atual", 1)))
+	combos_consecutivos = int(d.get("combos_consecutivos", 0))
+	faturamento_dia = float(d.get("faturamento_dia", 0.0))
+	acertos_dia = int(d.get("acertos_dia", 0))
+	erros_dia = int(d.get("erros_dia", 0))
+	var desb: Variant = d.get("ingredientes_desbloqueados", {})
+	if typeof(desb) == TYPE_DICTIONARY:
+		for k in ingredientes_desbloqueados.keys():
+			if desb.has(k):
+				ingredientes_desbloqueados[k] = bool(desb[k])
+	var comp: Variant = d.get("ingredientes_comprados", {})
+	if typeof(comp) == TYPE_DICTIONARY:
+		for k in ingredientes_comprados.keys():
+			if comp.has(k):
+				ingredientes_comprados[k] = bool(comp[k])
+	var est: Variant = d.get("estoque_bancada", {})
+	if typeof(est) == TYPE_DICTIONARY:
+		for k in estoque_bancada.keys():
+			if est.has(k):
+				estoque_bancada[k] = int(est[k])
+	_reaplicar_desbloqueios_por_dia_e_compra()
+	emit_signal("estoque_alterado")
+	emit_signal("status_atualizado")
+
+
+func ler_save() -> Dictionary:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return {}
+	var f := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if f == null:
+		return {}
+	var texto := f.get_as_text()
+	f.close()
+	var json := JSON.new()
+	if json.parse(texto) != OK:
+		return {}
+	var raiz: Variant = json.data
+	if typeof(raiz) != TYPE_DICTIONARY:
+		return {}
+	return raiz
+
+
+func gravar_save(payload: Dictionary) -> void:
+	var saida := {"version": SAVE_VERSION}
+	for k in payload.keys():
+		saida[k] = payload[k]
+	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify(saida, "\t"))
+	f.close()
