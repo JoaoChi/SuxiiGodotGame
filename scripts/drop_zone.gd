@@ -24,15 +24,18 @@ func _ready() -> void:
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	if typeof(data) != TYPE_STRING:
 		return false
-	if not order_manager or not order_manager.cliente_ativo:
+	if not order_manager or not order_manager.cliente_ativo or not order_manager.pedido_aceito:
 		return false
 	var nome_ingrediente := data as String
+	# Ferramentas não entram em estoque_bancada; consumir_estoque já as trata à parte.
+	if nome_ingrediente in ["faca", "esteira", "fritadeira"]:
+		return true
 	return GameManager.estoque_bancada.get(nome_ingrediente, 0) > 0
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var nome_ingrediente = data as String
 
-	if not order_manager or not order_manager.cliente_ativo:
+	if not order_manager or not order_manager.cliente_ativo or not order_manager.pedido_aceito:
 		return
 
 	# O OrderManager já valida/consome estoque; evita consumo duplicado.

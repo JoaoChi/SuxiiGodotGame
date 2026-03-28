@@ -13,6 +13,9 @@ var pedido_atual_nome: String = ""
 var receita_esperada: Array = []
 var montagem_atual: Array = []
 var cliente_ativo: bool = false
+## Só após aceitar no balcão o timer corre e a montagem consome ingredientes.
+var pedido_aceito: bool = false
+var tempo_limite_atual: float = 0.0
 var timer_pedido: Timer
 
 var pedidos_atendidos_hoje: int = 0
@@ -45,6 +48,11 @@ func gerar_novo_pedido() -> void:
 	if pedidos_atendidos_hoje >= meta_pedidos_dia:
 		emit_signal("expediente_encerrado")
 		return
+
+	pedido_aceito = false
+	tempo_limite_atual = 0.0
+	if timer_pedido != null:
+		timer_pedido.stop()
 
 	# 1. Filtrar receitas disponíveis no dia + que o jogador pode montar.
 	var dados_progressao: Dictionary = GameManager.get_progressao_dia()
@@ -97,8 +105,17 @@ func gerar_novo_pedido() -> void:
 		tempo_limite *= 0.8
 	tempo_limite = maxf(8.0, tempo_limite)
 
-	timer_pedido.start(tempo_limite)
+	tempo_limite_atual = tempo_limite
 	emit_signal("pedido_gerado", cliente_atual.nome, fala, pedido_atual_nome, tempo_limite, cliente_atual.textura_pixel_art)
+
+
+func aceitar_pedido() -> void:
+	if not cliente_ativo or pedido_aceito:
+		return
+	if tempo_limite_atual <= 0.0:
+		return
+	pedido_aceito = true
+	timer_pedido.start(tempo_limite_atual)
 
 func _pick_cliente_nao_jow() -> ClienteData:
 	var candidatos: Array[ClienteData] = []
@@ -110,7 +127,8 @@ func _pick_cliente_nao_jow() -> ClienteData:
 	return candidatos.pick_random()
 
 func adicionar_ingrediente(ingrediente: String) -> void:
-	if not cliente_ativo: return
+	if not cliente_ativo or not pedido_aceito:
+		return
 	if not GameManager.consumir_estoque(ingrediente): return
 	montagem_atual.append(ingrediente)
 	emit_signal("ingrediente_adicionado", ingrediente)
@@ -121,8 +139,10 @@ func limpar_montagem() -> void:
 	emit_signal("montagem_limpa")
 
 func entregar_pedido() -> void:
-	if not cliente_ativo: return
+	if not cliente_ativo or not pedido_aceito:
+		return
 	cliente_ativo = false
+	pedido_aceito = false
 	var tempo_restante = timer_pedido.time_left
 	timer_pedido.stop()
 	
@@ -151,8 +171,10 @@ func entregar_pedido() -> void:
 	limpar_montagem()
 
 func _on_timer_timeout() -> void:
-	if not cliente_ativo: return
+	if not cliente_ativo:
+		return
 	cliente_ativo = false
+	pedido_aceito = false
 	GameManager.combos_consecutivos = 0
 	GameManager.erros_dia += 1
 	GameManager.processar_reputacao(-1.5)

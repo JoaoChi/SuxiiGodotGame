@@ -6,6 +6,7 @@ const ESTACAO_MONTAGEM := "montagem"
 const ESTACAO_FRITURA := "fritura"
 
 const SETTINGS_SCENE: PackedScene = preload("res://scenes/settings.tscn")
+const SCENE_ESTACAO_ATENDIMENTO: PackedScene = preload("res://scenes/estacao_atendimento.tscn")
 const TEXTURAS_SUSHIS: Dictionary = {
 	"Sashimi": "res://features/food/sashimi.png",
 	"Nigiri": "res://features/food/nigiri.png",
@@ -49,6 +50,10 @@ var _estacao_fritura: Control
 var _estacao_atual: String = ESTACAO_ATENDIMENTO
 var _barra_navegacao_estacoes: HBoxContainer
 var _btn_negar_pedido: Button
+var _btn_aceitar_pedido: Button
+var _label_instrucao_balcao: Label
+var _barras_tempo_pedido: Array[ProgressBar] = []
+var _labels_lista_ingredientes: Array[Label] = []
 var _grupo_area_trabalho: Array[Control] = []
 
 enum EstadoTurno { PREPARANDO, ABERTO, FECHADO }
@@ -74,6 +79,10 @@ func _ready() -> void:
 	_injetar_feedback_montagem_e_lixeira()
 	_injetar_botoes_ferramentas()
 	_configurar_containers_estacoes_e_navegacao()
+	if is_instance_valid(label_status):
+		label_status.clip_contents = true
+		label_status.custom_minimum_size = Vector2(560, 44)
+		label_status.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	_atualizar_botoes_estoque_bancada()
 	_aplicar_texturas_botoes()
 	_atualizar_textos_botoes_preparo()
@@ -113,6 +122,90 @@ func _aplicar_preset_coluna_principal(v: Control) -> void:
 	v.offset_bottom = -148.0
 
 
+func _criar_label_lista_ingredientes_pedido() -> Label:
+	var lab := Label.new()
+	lab.name = "LabelListaIngredientesPedido"
+	lab.text = ""
+	lab.visible = false
+	lab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return lab
+
+
+func _clonar_barra_tempo_pedido() -> ProgressBar:
+	if not is_instance_valid(barra_tempo):
+		return null
+	var cl: ProgressBar = barra_tempo.duplicate() as ProgressBar
+	cl.name = "BarraTempoPedido"
+	cl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return cl
+
+
+func _registrar_barra_tempo_pedido(pb: ProgressBar) -> void:
+	if is_instance_valid(pb) and not pb in _barras_tempo_pedido:
+		_barras_tempo_pedido.append(pb)
+
+
+func _atualizar_texto_lista_ingredientes_pedido(texto: String, visivel: bool) -> void:
+	for lab in _labels_lista_ingredientes:
+		if is_instance_valid(lab):
+			lab.text = texto
+			lab.visible = visivel
+
+
+func _definir_instrucao_balcao(texto: String, visivel: bool) -> void:
+	if not is_instance_valid(_label_instrucao_balcao):
+		return
+	_label_instrucao_balcao.text = texto
+	_label_instrucao_balcao.visible = visivel
+
+
+func _aplicar_estilo_botao_destaque(botao: Button, cor_fundo: Color) -> void:
+	botao.custom_minimum_size = Vector2(0, 52)
+	botao.focus_mode = Control.FOCUS_NONE
+	var sb_n := StyleBoxFlat.new()
+	sb_n.bg_color = cor_fundo
+	sb_n.border_color = cor_fundo.lightened(0.38)
+	sb_n.set_border_width_all(2)
+	sb_n.set_corner_radius_all(10)
+	sb_n.content_margin_left = 18
+	sb_n.content_margin_top = 14
+	sb_n.content_margin_right = 18
+	sb_n.content_margin_bottom = 14
+	botao.add_theme_stylebox_override("normal", sb_n)
+	var sb_h: StyleBoxFlat = sb_n.duplicate()
+	sb_h.bg_color = cor_fundo.lightened(0.1)
+	botao.add_theme_stylebox_override("hover", sb_h)
+	var sb_p: StyleBoxFlat = sb_n.duplicate()
+	sb_p.bg_color = cor_fundo.darkened(0.12)
+	botao.add_theme_stylebox_override("pressed", sb_p)
+	botao.add_theme_color_override("font_color", Color(0.96, 0.97, 0.99))
+	botao.add_theme_font_size_override("font_size", 18)
+
+
+func _aplicar_estilo_botao_navegacao(botao: Button) -> void:
+	botao.custom_minimum_size = Vector2(0, 44)
+	botao.focus_mode = Control.FOCUS_NONE
+	var c := Color(0.26, 0.28, 0.32)
+	var sb_n := StyleBoxFlat.new()
+	sb_n.bg_color = c
+	sb_n.border_color = c.lightened(0.35)
+	sb_n.set_border_width_all(1)
+	sb_n.set_corner_radius_all(6)
+	sb_n.set_content_margin_all(10)
+	botao.add_theme_stylebox_override("normal", sb_n)
+	var sb_h: StyleBoxFlat = sb_n.duplicate()
+	sb_h.bg_color = c.lightened(0.1)
+	botao.add_theme_stylebox_override("hover", sb_h)
+	var sb_p: StyleBoxFlat = sb_n.duplicate()
+	sb_p.bg_color = c.darkened(0.08)
+	botao.add_theme_stylebox_override("pressed", sb_p)
+	botao.add_theme_color_override("font_color", Color(0.94, 0.95, 0.97))
+	botao.add_theme_font_size_override("font_size", 15)
+
+
 func _configurar_containers_estacoes_e_navegacao() -> void:
 	vbox_legacy = get_node_or_null("VBoxContainer") as VBoxContainer
 	if not is_instance_valid(vbox_legacy):
@@ -150,48 +243,98 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 
 	btn_abrir = get_node_or_null("BtnAbrir") as Button
 
-	_estacao_atendimento = _criar_container_estacao("EstacaoAtendimento")
+	_estacao_atendimento = get_node_or_null("EstacaoAtendimento") as Control
+	if not is_instance_valid(_estacao_atendimento):
+		_estacao_atendimento = SCENE_ESTACAO_ATENDIMENTO.instantiate() as Control
 	_estacao_preparo = _criar_container_estacao("EstacaoPreparo")
 	_estacao_montagem = _criar_container_estacao("EstacaoMontagem")
 	_estacao_fritura = _criar_container_estacao("EstacaoFritura")
 
 	var ordem_insercao: int = order_manager.get_index() + 1
 	for est in [_estacao_atendimento, _estacao_preparo, _estacao_montagem, _estacao_fritura]:
-		add_child(est)
+		if est.get_parent() != self:
+			add_child(est)
 		move_child(est, ordem_insercao)
 		ordem_insercao += 1
 
 	var vbox_atend := VBoxContainer.new()
 	vbox_atend.name = "VBoxColunaAtendimento"
-	vbox_atend.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox_atend.mouse_filter = Control.MOUSE_FILTER_STOP
+	vbox_atend.z_index = 24
+	vbox_atend.z_as_relative = false
+	vbox_atend.add_theme_constant_override("separation", 12)
 	_aplicar_preset_coluna_principal(vbox_atend)
 	_estacao_atendimento.add_child(vbox_atend)
 
 	if is_instance_valid(label_pedido):
+		label_pedido.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label_pedido.clip_contents = true
 		label_pedido.reparent(vbox_atend)
-	if is_instance_valid(barra_tempo):
-		barra_tempo.reparent(vbox_atend)
+
+	_label_instrucao_balcao = Label.new()
+	_label_instrucao_balcao.name = "LabelInstrucaoBalcao"
+	_label_instrucao_balcao.visible = false
+	_label_instrucao_balcao.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_label_instrucao_balcao.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label_instrucao_balcao.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_label_instrucao_balcao.add_theme_font_size_override("font_size", 16)
+	_label_instrucao_balcao.add_theme_color_override("font_color", Color(0.78, 0.82, 0.88))
+	_label_instrucao_balcao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox_atend.add_child(_label_instrucao_balcao)
+
+	_btn_aceitar_pedido = Button.new()
+	_btn_aceitar_pedido.name = "BtnAceitarPedido"
+	_btn_aceitar_pedido.text = "Aceitar Pedido"
+	_btn_aceitar_pedido.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_btn_aceitar_pedido.visible = false
+	_btn_aceitar_pedido.mouse_filter = Control.MOUSE_FILTER_STOP
+	_btn_aceitar_pedido.pressed.connect(_on_btn_aceitar_pedido_pressed)
+	_aplicar_estilo_botao_destaque(_btn_aceitar_pedido, Color(0.16, 0.46, 0.34))
+	vbox_atend.add_child(_btn_aceitar_pedido)
 
 	_btn_negar_pedido = Button.new()
 	_btn_negar_pedido.name = "BtnNegarPedido"
 	_btn_negar_pedido.text = "Negar Pedido"
 	_btn_negar_pedido.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_btn_negar_pedido.visible = false
+	_btn_negar_pedido.mouse_filter = Control.MOUSE_FILTER_STOP
 	_btn_negar_pedido.pressed.connect(_on_btn_negar_pedido_pressed)
+	_aplicar_estilo_botao_destaque(_btn_negar_pedido, Color(0.4, 0.22, 0.22))
 	vbox_atend.add_child(_btn_negar_pedido)
+
+	if is_instance_valid(barra_tempo):
+		barra_tempo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		barra_tempo.reparent(vbox_atend)
+
+	_barras_tempo_pedido.clear()
+	if is_instance_valid(barra_tempo):
+		_registrar_barra_tempo_pedido(barra_tempo)
 
 	if is_instance_valid(sprite_cliente):
 		sprite_cliente.reparent(_estacao_atendimento)
+		sprite_cliente.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# Escala do retrato vem de escala_retrato_ui; pivô no centro mantém o cliente no meio da visão.
+		sprite_cliente.pivot_offset = 0.5 * sprite_cliente.custom_minimum_size
 	if painel_dialogo_n != null:
 		painel_dialogo_n.reparent(_estacao_atendimento)
-	if is_instance_valid(btn_abrir):
-		btn_abrir.reparent(_estacao_atendimento)
+		if painel_dialogo_n is Control:
+			(painel_dialogo_n as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	_estacao_atendimento.move_child(vbox_atend, -1)
 
 	var vbox_prep := VBoxContainer.new()
 	vbox_prep.name = "VBoxColunaPreparo"
-	vbox_prep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox_prep.mouse_filter = Control.MOUSE_FILTER_STOP
 	_aplicar_preset_coluna_principal(vbox_prep)
 	_estacao_preparo.add_child(vbox_prep)
+
+	var bar_prep := _clonar_barra_tempo_pedido()
+	if bar_prep != null:
+		vbox_prep.add_child(bar_prep)
+		_registrar_barra_tempo_pedido(bar_prep)
+	var lab_prep := _criar_label_lista_ingredientes_pedido()
+	vbox_prep.add_child(lab_prep)
+	_labels_lista_ingredientes.append(lab_prep)
 
 	if is_instance_valid(margin_estoque):
 		margin_estoque.reparent(vbox_prep)
@@ -207,9 +350,18 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 
 	var vbox_mont := VBoxContainer.new()
 	vbox_mont.name = "VBoxColunaMontagem"
+	# IGNORE: a coluna cobre o mesmo retângulo que a BancadaFundo; STOP roubava o drop na tábua.
 	vbox_mont.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_aplicar_preset_coluna_principal(vbox_mont)
 	_estacao_montagem.add_child(vbox_mont)
+
+	var bar_mont := _clonar_barra_tempo_pedido()
+	if bar_mont != null:
+		vbox_mont.add_child(bar_mont)
+		_registrar_barra_tempo_pedido(bar_mont)
+	var lab_mont := _criar_label_lista_ingredientes_pedido()
+	vbox_mont.add_child(lab_mont)
+	_labels_lista_ingredientes.append(lab_mont)
 
 	if is_instance_valid(btn_entregar):
 		btn_entregar.reparent(vbox_mont)
@@ -222,8 +374,22 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	if is_instance_valid(btn_lixeira_n):
 		btn_lixeira_n.reparent(vbox_mont)
 
+	var vbox_col_frit := VBoxContainer.new()
+	vbox_col_frit.name = "VBoxColunaFritura"
+	vbox_col_frit.mouse_filter = Control.MOUSE_FILTER_STOP
+	_aplicar_preset_coluna_principal(vbox_col_frit)
+	_estacao_fritura.add_child(vbox_col_frit)
+
+	var bar_frit := _clonar_barra_tempo_pedido()
+	if bar_frit != null:
+		vbox_col_frit.add_child(bar_frit)
+		_registrar_barra_tempo_pedido(bar_frit)
+	var lab_frit := _criar_label_lista_ingredientes_pedido()
+	vbox_col_frit.add_child(lab_frit)
+	_labels_lista_ingredientes.append(lab_frit)
+
 	if is_instance_valid(vbox_fritura):
-		vbox_fritura.reparent(_estacao_fritura)
+		vbox_fritura.reparent(vbox_col_frit)
 
 	if is_instance_valid(vbox_ingredientes) and is_instance_valid(vbox_fritura):
 		var btn_fritadeira_n: Node = vbox_ingredientes.get_node_or_null("btn_fritadeira")
@@ -241,6 +407,14 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 
 	vbox_legacy.hide()
 	_criar_barra_navegacao_inferior()
+	# BtnAbrir fica filho do Game (como na cena): z_index só ordena entre irmãos; dentro da
+	# estação o VBoxColunaAtendimento (último filho + área enorme) roubava o clique.
+	if is_instance_valid(btn_abrir):
+		btn_abrir.z_as_relative = false
+		btn_abrir.z_index = 46
+		btn_abrir.mouse_filter = Control.MOUSE_FILTER_STOP
+		move_child(btn_abrir, -1)
+
 	mudar_estacao(ESTACAO_ATENDIMENTO)
 
 
@@ -264,6 +438,8 @@ func _criar_barra_navegacao_inferior() -> void:
 		b.text = rotulos[i]
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		b.mouse_filter = Control.MOUSE_FILTER_STOP
+		_aplicar_estilo_botao_navegacao(b)
 		b.pressed.connect(mudar_estacao.bind(ids[i]))
 		nav.add_child(b)
 
@@ -285,7 +461,26 @@ func mudar_estacao(nome_estacao: String) -> void:
 		if is_instance_valid(ctrl):
 			ctrl.visible = (chave == nome_estacao)
 
+	_atualizar_visibilidade_botoes_balcao_pedido()
+
+
+func _atualizar_visibilidade_botoes_balcao_pedido() -> void:
+	_atualizar_visibilidade_btn_aceitar_pedido()
 	_atualizar_visibilidade_btn_negar_pedido()
+
+
+func _atualizar_visibilidade_btn_aceitar_pedido() -> void:
+	if not is_instance_valid(_btn_aceitar_pedido):
+		return
+	var na_estacao_balcao: bool = _estacao_atual == ESTACAO_ATENDIMENTO
+	_btn_aceitar_pedido.visible = (
+		na_estacao_balcao
+		and not _jogo_finalizado
+		and estado_atual == EstadoTurno.ABERTO
+		and is_instance_valid(order_manager)
+		and order_manager.cliente_ativo
+		and not order_manager.pedido_aceito
+	)
 
 
 func _atualizar_visibilidade_btn_negar_pedido() -> void:
@@ -298,8 +493,20 @@ func _atualizar_visibilidade_btn_negar_pedido() -> void:
 		and estado_atual == EstadoTurno.ABERTO
 		and is_instance_valid(order_manager)
 		and order_manager.cliente_ativo
+		and not order_manager.pedido_aceito
 	)
 	_btn_negar_pedido.visible = pode_negar
+
+
+func _on_btn_aceitar_pedido_pressed() -> void:
+	if _jogo_finalizado or estado_atual != EstadoTurno.ABERTO:
+		return
+	if not is_instance_valid(order_manager) or not order_manager.cliente_ativo:
+		return
+	order_manager.aceitar_pedido()
+	_definir_instrucao_balcao("", false)
+	label_status.text = "Montando... (0 itens)"
+	_atualizar_visibilidade_controles_turno()
 
 
 func _on_btn_negar_pedido_pressed() -> void:
@@ -310,6 +517,7 @@ func _on_btn_negar_pedido_pressed() -> void:
 
 	order_manager.timer_pedido.stop()
 	order_manager.cliente_ativo = false
+	order_manager.pedido_aceito = false
 	GameManager.combos_consecutivos = 0
 	GameManager.erros_dia += 1
 	GameManager.processar_reputacao(-0.75)
@@ -317,6 +525,8 @@ func _on_btn_negar_pedido_pressed() -> void:
 	order_manager.limpar_montagem()
 
 	_limpar_pilha_visual()
+	_atualizar_texto_lista_ingredientes_pedido("", false)
+	_definir_instrucao_balcao("", false)
 	if is_instance_valid(barra_tempo):
 		barra_tempo.hide()
 	label_status.text = "Pedido recusado."
@@ -382,6 +592,7 @@ func _injetar_feedback_montagem_e_lixeira() -> void:
 		var label_montagem := Label.new()
 		label_montagem.name = "LabelMontagemAtual"
 		label_montagem.text = "Montagem: -"
+		label_montagem.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		label_montagem.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label_montagem.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		label_montagem.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -453,33 +664,43 @@ func _atualizar_textos_botoes_preparo() -> void:
 		botao.text = "%s\n($%.0f)" % [nome_insumo, custo]
 
 func _process(_delta: float) -> void:
-	# Feedback visual do tempo do pedido atual.
-	# (o OrderManager controla timer_pedido e dispara tempo_esgotado quando acaba)
-	if not is_instance_valid(barra_tempo) or not is_instance_valid(order_manager):
+	# Feedback visual do tempo do pedido atual (espelhado em todas as bancadas).
+	if not is_instance_valid(order_manager):
 		return
 
 	var timer: Timer = order_manager.timer_pedido
-	if order_manager.cliente_ativo and timer != null and not timer.is_stopped():
-		barra_tempo.show()
+	var mostrar_barra: bool = (
+		order_manager.cliente_ativo
+		and order_manager.pedido_aceito
+		and timer != null
+		and not timer.is_stopped()
+	)
+
+	if mostrar_barra:
 		var tempo_restante := timer.time_left
 		var tempo_total := timer.wait_time
-
 		var pct := 0.0
 		if tempo_total > 0.0:
 			pct = (tempo_restante / tempo_total) * 100.0
+		pct = clampf(pct, 0.0, 100.0)
 
-		barra_tempo.value = clampf(pct, 0.0, 100.0)
-
-		# Ajusta cor conforme o tempo restante (verde -> amarelo -> vermelho).
-		# Usamos modulate para um feedback rápido sem mexer no tema.
-		if barra_tempo.value > 60.0:
-			barra_tempo.modulate = Color(0.2, 1.0, 0.2, 1.0)
-		elif barra_tempo.value > 30.0:
-			barra_tempo.modulate = Color(1.0, 1.0, 0.2, 1.0)
+		var mod: Color
+		if pct > 60.0:
+			mod = Color(0.2, 1.0, 0.2, 1.0)
+		elif pct > 30.0:
+			mod = Color(1.0, 1.0, 0.2, 1.0)
 		else:
-			barra_tempo.modulate = Color(1.0, 0.2, 0.2, 1.0)
+			mod = Color(1.0, 0.2, 0.2, 1.0)
+
+		for pb in _barras_tempo_pedido:
+			if is_instance_valid(pb):
+				pb.show()
+				pb.value = pct
+				pb.modulate = mod
 	else:
-		barra_tempo.hide()
+		for pb in _barras_tempo_pedido:
+			if is_instance_valid(pb):
+				pb.hide()
 
 func preparar_novo_dia() -> void:
 	if _jogo_finalizado:
@@ -492,6 +713,8 @@ func preparar_novo_dia() -> void:
 	label_status.text = "Prepare sua bancada."
 	if is_instance_valid(label_dialogo):
 		label_dialogo.text = ""
+	_atualizar_texto_lista_ingredientes_pedido("", false)
+	_definir_instrucao_balcao("", false)
 	_limpar_textura_cliente_sprite()
 	if is_instance_valid(btn_abrir):
 		btn_abrir.show()
@@ -630,7 +853,7 @@ func _atualizar_visibilidade_ingredientes_e_preparo() -> void:
 
 func _atualizar_visibilidade_controles_turno() -> void:
 	if not is_instance_valid(btn_entregar):
-		_atualizar_visibilidade_btn_negar_pedido()
+		_atualizar_visibilidade_botoes_balcao_pedido()
 		return
 
 	var btn_lixeira: Button = null
@@ -651,7 +874,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 		for n in _grupo_area_trabalho:
 			if is_instance_valid(n):
 				n.hide()
-		_atualizar_visibilidade_btn_negar_pedido()
+		_atualizar_visibilidade_botoes_balcao_pedido()
 		return
 
 	var painel_bloqueando: bool = painel_resumo.visible or painel_loja.visible
@@ -665,7 +888,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 		for n in _grupo_area_trabalho:
 			if is_instance_valid(n):
 				n.hide()
-		_atualizar_visibilidade_btn_negar_pedido()
+		_atualizar_visibilidade_botoes_balcao_pedido()
 		return
 
 	for n in _grupo_area_trabalho:
@@ -681,7 +904,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 			if is_instance_valid(hbox_ing):
 				hbox_ing.hide()
 		EstadoTurno.ABERTO:
-			var em_pedido: bool = order_manager.cliente_ativo
+			var em_pedido: bool = order_manager.cliente_ativo and order_manager.pedido_aceito
 			btn_entregar.visible = em_pedido
 			if is_instance_valid(btn_lixeira):
 				btn_lixeira.visible = em_pedido
@@ -700,7 +923,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 					n.hide()
 
 	_atualizar_visibilidade_ingredientes_e_preparo()
-	_atualizar_visibilidade_btn_negar_pedido()
+	_atualizar_visibilidade_botoes_balcao_pedido()
 
 func _set_botoes_preparo_desabilitados(desabilitar: bool) -> void:
 	if not is_instance_valid(hbox_preparo):
@@ -772,6 +995,7 @@ func abrir_restaurante() -> void:
 		btn_abrir.hide()
 	label_pedido.text = "Restaurante Aberto!"
 	label_status.text = "Aguardando o primeiro cliente..."
+	_definir_instrucao_balcao("", false)
 	_atualizar_visibilidade_controles_turno()
 	get_tree().create_timer(1.5).timeout.connect(order_manager.iniciar_expediente)
 
@@ -798,8 +1022,14 @@ func _on_pedido_gerado(nome_cliente: String, fala_recepcao: String, nome_sushi: 
 	if estado_atual != EstadoTurno.ABERTO: return
 	_limpar_pilha_visual()
 	label_dialogo.text = "[%s]: \"%s\"" % [nome_cliente, fala_recepcao]
-	label_pedido.text = "Receita: %s\nIngredientes Esperados: %s" % [nome_sushi, str(order_manager.receita_esperada)]
-	label_status.text = "Montando... (0 itens)"
+	if is_instance_valid(label_pedido):
+		label_pedido.text = "Receita: %s" % nome_sushi
+	_atualizar_texto_lista_ingredientes_pedido(
+		"Ingredientes esperados: %s" % str(order_manager.receita_esperada),
+		true
+	)
+	label_status.text = "Pedido no balcão"
+	_definir_instrucao_balcao("Aceite o pedido para iniciar o preparo e contar o tempo.", true)
 	
 	if textura:
 		_aplicar_textura_cliente(textura)
@@ -977,8 +1207,8 @@ func _on_pedido_entregue(sucesso: bool, dinheiro: float, estrelas: float) -> voi
 		return
 	_gerar_feedback_visual(sucesso)
 	_entrega_em_andamento = false
-	if is_instance_valid(barra_tempo):
-		barra_tempo.hide()
+	_atualizar_texto_lista_ingredientes_pedido("", false)
+	_definir_instrucao_balcao("", false)
 	_limpar_textura_cliente_sprite()
 
 	if sucesso:
@@ -996,8 +1226,8 @@ func _on_pedido_entregue(sucesso: bool, dinheiro: float, estrelas: float) -> voi
 func _on_tempo_esgotado() -> void:
 	if _jogo_finalizado:
 		return
-	if is_instance_valid(barra_tempo):
-		barra_tempo.hide()
+	_atualizar_texto_lista_ingredientes_pedido("", false)
+	_definir_instrucao_balcao("", false)
 	_limpar_textura_cliente_sprite()
 
 	label_status.text = "Tempo esgotado!"
@@ -1014,7 +1244,9 @@ func _on_expediente_encerrado() -> void:
 	estado_atual = EstadoTurno.FECHADO
 	label_pedido.text = "Expediente Encerrado!"
 	label_status.text = "Limpando a bancada..."
-	
+	_atualizar_texto_lista_ingredientes_pedido("", false)
+	_definir_instrucao_balcao("", false)
+
 	# Configura e exibe a tela de resumo
 	label_resumo.text = "Fim do Dia %d\n\nFaturamento: R$ %.2f\nPedidos Perfeitos: %d\nErros/Perdas: %d" % [GameManager.dia_atual, GameManager.faturamento_dia, GameManager.acertos_dia, GameManager.erros_dia]
 	painel_resumo.show()
@@ -1029,6 +1261,8 @@ func _on_btn_entregar_pressed() -> void:
 	if _entrega_em_andamento:
 		return
 	if not order_manager.cliente_ativo:
+		return
+	if not order_manager.pedido_aceito:
 		return
 
 	# Se o sushi pronto estiver visível, animamos a entrega antes de entregar.
@@ -1103,7 +1337,10 @@ func _on_restaurante_falido() -> void:
 	_jogo_finalizado = true
 	estado_atual = EstadoTurno.FECHADO
 	order_manager.timer_pedido.stop()
-	
+	order_manager.pedido_aceito = false
+	_atualizar_texto_lista_ingredientes_pedido("", false)
+	_definir_instrucao_balcao("", false)
+
 	# Bloqueia UI e evita ações/timers do turno atual.
 	painel_resumo.hide()
 	painel_loja.hide()

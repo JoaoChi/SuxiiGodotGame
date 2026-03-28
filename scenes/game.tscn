@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://dm7hfr1yk8p2w" path="res://scripts/fryer_drop_zone.gd" id="5_fryer"]
 [ext_resource type="Script" uid="uid://bm8k2j4xqyp7w" path="res://scripts/tabua_corte.gd" id="6_tabua"]
 [ext_resource type="Texture2D" uid="uid://d3p2jgf1t5po3" path="res://assets/textures/Bancadinhaaaaaaaaaaaaaaaaaaaa.png" id="8_bancada"]
+[ext_resource type="PackedScene" uid="uid://d7k2m_est_atend_bg" path="res://scenes/estacao_atendimento.tscn" id="9_est_atend"]
 
 [node name="Game" type="Control" unique_id=603755664]
 layout_mode = 3
@@ -19,6 +20,8 @@ script = ExtResource("1_game")
 
 [node name="OrderManager" type="Node" parent="." unique_id=3169729]
 script = ExtResource("2_order")
+
+[node name="EstacaoAtendimento" parent="." instance=ExtResource("9_est_atend")]
 
 [node name="BancadaFundo" type="TextureRect" parent="." unique_id=789100001]
 z_index = -10
@@ -84,15 +87,19 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="PainelDialogo" type="PanelContainer" parent="." unique_id=1718539097]
-z_index = 10
+z_index = 16
 layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
+anchors_preset = 0
+anchor_left = 0.0
+anchor_top = 0.30
 anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -140.0
+anchor_bottom = 0.40
+offset_left = 20.0
+offset_top = 0.0
+offset_right = -20.0
+offset_bottom = 0.0
 grow_horizontal = 2
-grow_vertical = 0
+grow_vertical = 2
 
 [node name="LabelDialogoUX" type="Label" parent="PainelDialogo" unique_id=989802050]
 layout_mode = 2
@@ -392,13 +399,17 @@ text = "Abrir Restaurante"
 z_index = 11
 custom_minimum_size = Vector2(280, 380)
 layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = -451.0
-offset_right = 333.0
-grow_vertical = 0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.58
+anchor_right = 0.5
+anchor_bottom = 0.58
+offset_left = -140.0
+offset_top = -190.0
+offset_right = 140.0
+offset_bottom = 190.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 stretch_mode = 6
 
