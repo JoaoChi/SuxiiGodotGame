@@ -1,5 +1,10 @@
 extends Control
 
+const ESTACAO_ATENDIMENTO := "atendimento"
+const ESTACAO_PREPARO := "preparo"
+const ESTACAO_MONTAGEM := "montagem"
+const ESTACAO_FRITURA := "fritura"
+
 const SETTINGS_SCENE: PackedScene = preload("res://scenes/settings.tscn")
 const TEXTURAS_SUSHIS: Dictionary = {
 	"Sashimi": "res://features/food/sashimi.png",
@@ -10,24 +15,41 @@ const TEXTURAS_SUSHIS: Dictionary = {
 	"Hot_Filadelfia": "res://features/food/hot.png"
 }
 
-@onready var label_pedido = $VBoxContainer/LabelPedido
 @onready var label_hud: Label = $HUDSuperior/HBoxHUD/LabelHUDUX
-@onready var label_status = $HUDSuperior/HBoxHUD/LabelStatusUX
-@onready var label_dialogo = $PainelDialogo/LabelDialogoUX
-@onready var sprite_cliente = $SpriteCliente
+@onready var label_status: Label = $HUDSuperior/HBoxHUD/LabelStatusUX
 @onready var order_manager = $OrderManager
-@onready var barra_tempo: ProgressBar = $VBoxContainer/BarraTempo
-@onready var bancada: TextureRect = $BancadaFundo
-@onready var sprite_sushi_pronto: TextureRect = $BancadaFundo/SpriteSushiPronto
 @onready var painel_resumo = $PainelResumo
 @onready var label_resumo = $PainelResumo/VBox/LabelResumo
 @onready var painel_loja = $PainelLoja
-@onready var label_estoque: Label = $VBoxContainer/MarginContainerEstoque/LabelEstoqueUX
-@onready var progress_bar_prep: ProgressBar = $VBoxContainer/HBoxPreparo/ProgressBarPrep
-@onready var vbox_fritura: Control = $VBoxContainer/HBoxBancadaEFritura/VBoxFritura
 @onready var painel_game_over = $PainelGameOver
-@onready var vbox_ingredientes: VBoxContainer = $DockIngredientes/VBoxIngredientes
-@onready var dock_ingredientes: Control = $DockIngredientes
+
+var label_pedido: Label
+var label_dialogo: Label
+var sprite_cliente: TextureRect
+var barra_tempo: ProgressBar
+var bancada: TextureRect
+var sprite_sushi_pronto: TextureRect
+var label_estoque: Label
+var progress_bar_prep: ProgressBar
+var vbox_fritura: Control
+var vbox_ingredientes: VBoxContainer
+var dock_ingredientes: Control
+var hbox_preparo: HBoxContainer
+var btn_tabua: Button
+var margin_estoque: MarginContainer
+var btn_entregar: Button
+var spacer_bancada: Control
+var vbox_legacy: VBoxContainer
+var btn_abrir: Button
+
+var _estacao_atendimento: Control
+var _estacao_preparo: Control
+var _estacao_montagem: Control
+var _estacao_fritura: Control
+var _estacao_atual: String = ESTACAO_ATENDIMENTO
+var _barra_navegacao_estacoes: HBoxContainer
+var _btn_negar_pedido: Button
+var _grupo_area_trabalho: Array[Control] = []
 
 enum EstadoTurno { PREPARANDO, ABERTO, FECHADO }
 var estado_atual: EstadoTurno = EstadoTurno.PREPARANDO
@@ -51,25 +73,257 @@ func _ready() -> void:
 
 	_injetar_feedback_montagem_e_lixeira()
 	_injetar_botoes_ferramentas()
+	_configurar_containers_estacoes_e_navegacao()
 	_atualizar_botoes_estoque_bancada()
 	_aplicar_texturas_botoes()
 	_atualizar_textos_botoes_preparo()
 	
 	painel_resumo.hide()
 	painel_loja.hide()
-	barra_tempo.hide()
+	if is_instance_valid(barra_tempo):
+		barra_tempo.hide()
 
 	# Placeholder para o sushi pronto (substituível pela arte final depois).
 	var placeholder_sushi := PlaceholderTexture2D.new()
 	placeholder_sushi.size = Vector2(256, 256)
-	sprite_sushi_pronto.texture = placeholder_sushi
-	sprite_sushi_pronto.hide()
-	_sushi_pronto_pos_inicial = sprite_sushi_pronto.position
+	if is_instance_valid(sprite_sushi_pronto):
+		sprite_sushi_pronto.texture = placeholder_sushi
+		sprite_sushi_pronto.hide()
+		_sushi_pronto_pos_inicial = sprite_sushi_pronto.position
 
 	GameManager.restaurante_falido.connect(_on_restaurante_falido)
 	painel_game_over.hide()
 	_jogo_finalizado = false
 	preparar_novo_dia()
+
+
+func _criar_container_estacao(nome: String) -> Control:
+	var c := Control.new()
+	c.name = nome
+	c.set_anchors_preset(Control.PRESET_FULL_RECT)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c
+
+
+func _aplicar_preset_coluna_principal(v: Control) -> void:
+	v.set_anchors_preset(Control.PRESET_FULL_RECT)
+	v.offset_left = 20.0
+	v.offset_top = 96.0
+	v.offset_right = -136.0
+	v.offset_bottom = -148.0
+
+
+func _configurar_containers_estacoes_e_navegacao() -> void:
+	vbox_legacy = get_node_or_null("VBoxContainer") as VBoxContainer
+	if not is_instance_valid(vbox_legacy):
+		push_error("Game: VBoxContainer não encontrado; estações não configuradas.")
+		return
+
+	label_pedido = vbox_legacy.get_node_or_null("LabelPedido") as Label
+	barra_tempo = vbox_legacy.get_node_or_null("BarraTempo") as ProgressBar
+	margin_estoque = vbox_legacy.get_node_or_null("MarginContainerEstoque") as MarginContainer
+	if is_instance_valid(margin_estoque):
+		label_estoque = margin_estoque.get_node_or_null("LabelEstoqueUX") as Label
+	btn_tabua = vbox_legacy.get_node_or_null("BtnTabua") as Button
+	hbox_preparo = vbox_legacy.get_node_or_null("HBoxPreparo") as HBoxContainer
+	if is_instance_valid(hbox_preparo):
+		progress_bar_prep = hbox_preparo.get_node_or_null("ProgressBarPrep") as ProgressBar
+	btn_entregar = vbox_legacy.get_node_or_null("BtnEntregar") as Button
+	spacer_bancada = vbox_legacy.get_node_or_null("SpacerBancada") as Control
+
+	var hbox_bancada_fritura: HBoxContainer = vbox_legacy.get_node_or_null("HBoxBancadaEFritura") as HBoxContainer
+	if is_instance_valid(hbox_bancada_fritura):
+		vbox_fritura = hbox_bancada_fritura.get_node_or_null("VBoxFritura") as Control
+
+	bancada = get_node_or_null("BancadaFundo") as TextureRect
+	if is_instance_valid(bancada):
+		sprite_sushi_pronto = bancada.get_node_or_null("SpriteSushiPronto") as TextureRect
+
+	dock_ingredientes = get_node_or_null("DockIngredientes") as Control
+	if is_instance_valid(dock_ingredientes):
+		vbox_ingredientes = dock_ingredientes.get_node_or_null("VBoxIngredientes") as VBoxContainer
+
+	sprite_cliente = get_node_or_null("SpriteCliente") as TextureRect
+	var painel_dialogo_n: Node = get_node_or_null("PainelDialogo")
+	if painel_dialogo_n != null:
+		label_dialogo = painel_dialogo_n.get_node_or_null("LabelDialogoUX") as Label
+
+	btn_abrir = get_node_or_null("BtnAbrir") as Button
+
+	_estacao_atendimento = _criar_container_estacao("EstacaoAtendimento")
+	_estacao_preparo = _criar_container_estacao("EstacaoPreparo")
+	_estacao_montagem = _criar_container_estacao("EstacaoMontagem")
+	_estacao_fritura = _criar_container_estacao("EstacaoFritura")
+
+	var ordem_insercao: int = order_manager.get_index() + 1
+	for est in [_estacao_atendimento, _estacao_preparo, _estacao_montagem, _estacao_fritura]:
+		add_child(est)
+		move_child(est, ordem_insercao)
+		ordem_insercao += 1
+
+	var vbox_atend := VBoxContainer.new()
+	vbox_atend.name = "VBoxColunaAtendimento"
+	vbox_atend.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_aplicar_preset_coluna_principal(vbox_atend)
+	_estacao_atendimento.add_child(vbox_atend)
+
+	if is_instance_valid(label_pedido):
+		label_pedido.reparent(vbox_atend)
+	if is_instance_valid(barra_tempo):
+		barra_tempo.reparent(vbox_atend)
+
+	_btn_negar_pedido = Button.new()
+	_btn_negar_pedido.name = "BtnNegarPedido"
+	_btn_negar_pedido.text = "Negar Pedido"
+	_btn_negar_pedido.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_btn_negar_pedido.visible = false
+	_btn_negar_pedido.pressed.connect(_on_btn_negar_pedido_pressed)
+	vbox_atend.add_child(_btn_negar_pedido)
+
+	if is_instance_valid(sprite_cliente):
+		sprite_cliente.reparent(_estacao_atendimento)
+	if painel_dialogo_n != null:
+		painel_dialogo_n.reparent(_estacao_atendimento)
+	if is_instance_valid(btn_abrir):
+		btn_abrir.reparent(_estacao_atendimento)
+
+	var vbox_prep := VBoxContainer.new()
+	vbox_prep.name = "VBoxColunaPreparo"
+	vbox_prep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_aplicar_preset_coluna_principal(vbox_prep)
+	_estacao_preparo.add_child(vbox_prep)
+
+	if is_instance_valid(margin_estoque):
+		margin_estoque.reparent(vbox_prep)
+	if is_instance_valid(btn_tabua):
+		btn_tabua.reparent(vbox_prep)
+	if is_instance_valid(hbox_preparo):
+		hbox_preparo.reparent(vbox_prep)
+
+	if is_instance_valid(bancada):
+		bancada.reparent(_estacao_montagem)
+	if is_instance_valid(dock_ingredientes):
+		dock_ingredientes.reparent(_estacao_montagem)
+
+	var vbox_mont := VBoxContainer.new()
+	vbox_mont.name = "VBoxColunaMontagem"
+	vbox_mont.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_aplicar_preset_coluna_principal(vbox_mont)
+	_estacao_montagem.add_child(vbox_mont)
+
+	if is_instance_valid(btn_entregar):
+		btn_entregar.reparent(vbox_mont)
+	var label_montagem_n: Node = vbox_legacy.get_node_or_null("LabelMontagemAtual")
+	if is_instance_valid(label_montagem_n):
+		label_montagem_n.reparent(vbox_mont)
+	if is_instance_valid(spacer_bancada):
+		spacer_bancada.reparent(vbox_mont)
+	var btn_lixeira_n: Node = vbox_legacy.get_node_or_null("BtnLixeira")
+	if is_instance_valid(btn_lixeira_n):
+		btn_lixeira_n.reparent(vbox_mont)
+
+	if is_instance_valid(vbox_fritura):
+		vbox_fritura.reparent(_estacao_fritura)
+
+	if is_instance_valid(vbox_ingredientes) and is_instance_valid(vbox_fritura):
+		var btn_fritadeira_n: Node = vbox_ingredientes.get_node_or_null("btn_fritadeira")
+		if is_instance_valid(btn_fritadeira_n):
+			btn_fritadeira_n.reparent(vbox_fritura)
+			vbox_fritura.move_child(btn_fritadeira_n, 0)
+
+	if is_instance_valid(hbox_bancada_fritura) and hbox_bancada_fritura.get_child_count() == 0:
+		hbox_bancada_fritura.queue_free()
+
+	_grupo_area_trabalho.clear()
+	for n in [margin_estoque, btn_tabua, hbox_preparo, spacer_bancada, vbox_fritura]:
+		if is_instance_valid(n):
+			_grupo_area_trabalho.append(n)
+
+	vbox_legacy.hide()
+	_criar_barra_navegacao_inferior()
+	mudar_estacao(ESTACAO_ATENDIMENTO)
+
+
+func _criar_barra_navegacao_inferior() -> void:
+	var nav := HBoxContainer.new()
+	nav.name = "BarraNavegacaoEstacoes"
+	nav.z_index = 25
+	nav.custom_minimum_size = Vector2(0, 52)
+	nav.add_theme_constant_override("separation", 8)
+	nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	nav.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	nav.offset_top = -56.0
+	nav.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(nav)
+	_barra_navegacao_estacoes = nav
+
+	var rotulos: PackedStringArray = ["Balcão", "Estoque", "Tábua", "Fritura"]
+	var ids: PackedStringArray = [ESTACAO_ATENDIMENTO, ESTACAO_PREPARO, ESTACAO_MONTAGEM, ESTACAO_FRITURA]
+	for i in rotulos.size():
+		var b := Button.new()
+		b.text = rotulos[i]
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(mudar_estacao.bind(ids[i]))
+		nav.add_child(b)
+
+
+func mudar_estacao(nome_estacao: String) -> void:
+	var mapa: Dictionary = {
+		ESTACAO_ATENDIMENTO: _estacao_atendimento,
+		ESTACAO_PREPARO: _estacao_preparo,
+		ESTACAO_MONTAGEM: _estacao_montagem,
+		ESTACAO_FRITURA: _estacao_fritura,
+	}
+	if not mapa.has(nome_estacao):
+		push_warning("Game: estação desconhecida: %s" % nome_estacao)
+		return
+
+	_estacao_atual = nome_estacao
+	for chave in mapa.keys():
+		var ctrl: Control = mapa[chave] as Control
+		if is_instance_valid(ctrl):
+			ctrl.visible = (chave == nome_estacao)
+
+	_atualizar_visibilidade_btn_negar_pedido()
+
+
+func _atualizar_visibilidade_btn_negar_pedido() -> void:
+	if not is_instance_valid(_btn_negar_pedido):
+		return
+	var na_estacao_balcao: bool = _estacao_atual == ESTACAO_ATENDIMENTO
+	var pode_negar: bool = (
+		na_estacao_balcao
+		and not _jogo_finalizado
+		and estado_atual == EstadoTurno.ABERTO
+		and is_instance_valid(order_manager)
+		and order_manager.cliente_ativo
+	)
+	_btn_negar_pedido.visible = pode_negar
+
+
+func _on_btn_negar_pedido_pressed() -> void:
+	if _jogo_finalizado or estado_atual != EstadoTurno.ABERTO:
+		return
+	if not is_instance_valid(order_manager) or not order_manager.cliente_ativo:
+		return
+
+	order_manager.timer_pedido.stop()
+	order_manager.cliente_ativo = false
+	GameManager.combos_consecutivos = 0
+	GameManager.erros_dia += 1
+	GameManager.processar_reputacao(-0.75)
+	order_manager.pedidos_atendidos_hoje += 1
+	order_manager.limpar_montagem()
+
+	_limpar_pilha_visual()
+	if is_instance_valid(barra_tempo):
+		barra_tempo.hide()
+	label_status.text = "Pedido recusado."
+	atualizar_hud()
+	_atualizar_visibilidade_controles_turno()
+	order_manager.gerar_novo_pedido()
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -175,19 +429,21 @@ func _on_ferramenta_pressed(ferramenta: String) -> void:
 
 func _atualizar_textos_botoes_preparo() -> void:
 	var mapeamento_botoes: Dictionary = {
-		"arroz": "VBoxContainer/HBoxPreparo/BtnPrepArroz",
-		"salmao": "VBoxContainer/HBoxPreparo/BtnPrepSalmao",
-		"alga": "VBoxContainer/HBoxPreparo/BtnPrepAlga",
-		"cebolinha": "VBoxContainer/HBoxPreparo/BtnPrepCebolinha",
-		"gergelim": "VBoxContainer/HBoxPreparo/BtnPrepGergelim",
-		"cream_cheese": "VBoxContainer/HBoxPreparo/BtnPrepCreamCheese",
-		"massa_empanar": "VBoxContainer/HBoxPreparo/BtnPrepMassaEmpanar"
+		"arroz": "BtnPrepArroz",
+		"salmao": "BtnPrepSalmao",
+		"alga": "BtnPrepAlga",
+		"cebolinha": "BtnPrepCebolinha",
+		"gergelim": "BtnPrepGergelim",
+		"cream_cheese": "BtnPrepCreamCheese",
+		"massa_empanar": "BtnPrepMassaEmpanar"
 	}
 
 	for item in mapeamento_botoes.keys():
 		if not GameManager.MERCADO.has(item):
 			continue
-		var botao: Button = get_node_or_null(mapeamento_botoes[item]) as Button
+		if not is_instance_valid(hbox_preparo):
+			continue
+		var botao: Button = hbox_preparo.get_node_or_null(mapeamento_botoes[item]) as Button
 		if botao == null:
 			continue
 
@@ -199,7 +455,7 @@ func _atualizar_textos_botoes_preparo() -> void:
 func _process(_delta: float) -> void:
 	# Feedback visual do tempo do pedido atual.
 	# (o OrderManager controla timer_pedido e dispara tempo_esgotado quando acaba)
-	if barra_tempo == null:
+	if not is_instance_valid(barra_tempo) or not is_instance_valid(order_manager):
 		return
 
 	var timer: Timer = order_manager.timer_pedido
@@ -231,11 +487,14 @@ func preparar_novo_dia() -> void:
 	estado_atual = EstadoTurno.PREPARANDO
 	GameManager.resetar_dia()
 
-	label_pedido.text = "Dia %d - Restaurante Fechado\nDinheiro Disponível: R$ %.2f" % [GameManager.dia_atual, GameManager.dinheiro_atual]
+	if is_instance_valid(label_pedido):
+		label_pedido.text = "Dia %d - Restaurante Fechado\nDinheiro Disponível: R$ %.2f" % [GameManager.dia_atual, GameManager.dinheiro_atual]
 	label_status.text = "Prepare sua bancada."
-	label_dialogo.text = ""
+	if is_instance_valid(label_dialogo):
+		label_dialogo.text = ""
 	_limpar_textura_cliente_sprite()
-	$BtnAbrir.show()
+	if is_instance_valid(btn_abrir):
+		btn_abrir.show()
 	atualizar_hud()
 	atualizar_label_estoque()
 	_atualizar_visibilidade_controles_turno()
@@ -245,6 +504,8 @@ func _on_estoque_alterado() -> void:
 	_atualizar_botoes_estoque_bancada()
 
 func atualizar_label_estoque() -> void:
+	if not is_instance_valid(label_estoque):
+		return
 	var partes: PackedStringArray = []
 	for item in ["arroz", "salmao", "alga", "cebolinha", "gergelim", "cream_cheese", "massa_empanar"]:
 		if not GameManager.ingredientes_desbloqueados.get(item, false):
@@ -253,53 +514,61 @@ func atualizar_label_estoque() -> void:
 		partes.append("%s: %d" % [item, q])
 	label_estoque.text = "Estoque (bancada): " + ", ".join(partes)
 
+
+func _iterar_botoes_doca_e_fritura(callback: Callable) -> void:
+	if is_instance_valid(vbox_ingredientes):
+		for child in vbox_ingredientes.get_children():
+			if child is Button:
+				callback.call(child)
+	if is_instance_valid(vbox_fritura):
+		for child in vbox_fritura.get_children():
+			if child is Button:
+				callback.call(child)
+
+
 func _atualizar_botoes_estoque_bancada() -> void:
-	if not is_instance_valid(vbox_ingredientes):
+	if not is_instance_valid(vbox_ingredientes) and not is_instance_valid(vbox_fritura):
 		return
 
-	for child in vbox_ingredientes.get_children():
-		var botao: Button = child as Button
-		if botao == null:
-			continue
-
+	_iterar_botoes_doca_e_fritura(func(botao: Button) -> void:
 		var item: String = _resolver_item_botao_doca(botao)
 		if item == "":
-			continue
+			return
 
 		if item in ["faca", "esteira", "fritadeira"]:
-			continue
+			return
 
 		if not GameManager.ingredientes_desbloqueados.get(item, false):
 			botao.disabled = true
-			continue
+			return
 
 		var qtd: int = int(GameManager.estoque_bancada.get(item, 0))
 		botao.text = "%s [ %d ]" % [_nome_legivel_item(item), qtd]
 		botao.disabled = qtd <= 0
+	)
 
 func _aplicar_texturas_botoes() -> void:
-	if not is_instance_valid(vbox_ingredientes):
+	if not is_instance_valid(vbox_ingredientes) and not is_instance_valid(vbox_fritura):
 		return
 
-	for child in vbox_ingredientes.get_children():
-		var botao: Button = child as Button
-		if botao == null or not is_instance_valid(botao):
-			continue
+	_iterar_botoes_doca_e_fritura(func(botao: Button) -> void:
+		if not is_instance_valid(botao):
+			return
 
 		var item: String = _resolver_item_botao_doca(botao)
 		if item == "":
-			continue
+			return
 
 		var caminho_img: String = "res://features/ingredients/%s.png" % item
 		if not ResourceLoader.exists(caminho_img):
 			# Fallback para compatibilidade com estrutura anterior.
 			caminho_img = "res://assets/ingredientes/%s.png" % item
 		if not ResourceLoader.exists(caminho_img):
-			continue
+			return
 
 		var textura: Texture2D = load(caminho_img) as Texture2D
 		if textura == null:
-			continue
+			return
 
 		botao.icon = textura
 		botao.expand_icon = true
@@ -310,6 +579,7 @@ func _aplicar_texturas_botoes() -> void:
 		elif GameManager.MERCADO.has(item):
 			var qtd: int = int(GameManager.estoque_bancada.get(item, 0))
 			botao.text = "\n[ %d ]" % qtd
+	)
 
 func _resolver_item_botao_doca(botao: Button) -> String:
 	if not is_instance_valid(botao):
@@ -332,36 +602,56 @@ func _resolver_item_botao_doca(botao: Button) -> String:
 	return ""
 
 func _atualizar_visibilidade_ingredientes_e_preparo() -> void:
-	$DockIngredientes/VBoxIngredientes/IngredienteCebolinha.visible = GameManager.ingredientes_desbloqueados["cebolinha"]
-	$DockIngredientes/VBoxIngredientes/IngredienteGergelim.visible = GameManager.ingredientes_desbloqueados["gergelim"]
-	$DockIngredientes/VBoxIngredientes/IngredienteCreamCheese.visible = GameManager.ingredientes_desbloqueados["cream_cheese"]
-	$DockIngredientes/VBoxIngredientes/IngredienteMassa.visible = GameManager.ingredientes_desbloqueados["massa_empanar"]
-	$VBoxContainer/HBoxPreparo/BtnPrepCebolinha.visible = GameManager.ingredientes_desbloqueados["cebolinha"]
-	$VBoxContainer/HBoxPreparo/BtnPrepGergelim.visible = GameManager.ingredientes_desbloqueados["gergelim"]
-	$VBoxContainer/HBoxPreparo/BtnPrepCreamCheese.visible = GameManager.ingredientes_desbloqueados["cream_cheese"]
-	vbox_fritura.visible = GameManager.ingredientes_desbloqueados["massa_empanar"]
+	if is_instance_valid(vbox_ingredientes):
+		var ing_ceb: Node = vbox_ingredientes.get_node_or_null("IngredienteCebolinha")
+		if ing_ceb:
+			ing_ceb.visible = GameManager.ingredientes_desbloqueados["cebolinha"]
+		var ing_ger: Node = vbox_ingredientes.get_node_or_null("IngredienteGergelim")
+		if ing_ger:
+			ing_ger.visible = GameManager.ingredientes_desbloqueados["gergelim"]
+		var ing_cc: Node = vbox_ingredientes.get_node_or_null("IngredienteCreamCheese")
+		if ing_cc:
+			ing_cc.visible = GameManager.ingredientes_desbloqueados["cream_cheese"]
+		var ing_ma: Node = vbox_ingredientes.get_node_or_null("IngredienteMassa")
+		if ing_ma:
+			ing_ma.visible = GameManager.ingredientes_desbloqueados["massa_empanar"]
+	if is_instance_valid(hbox_preparo):
+		var bce: Node = hbox_preparo.get_node_or_null("BtnPrepCebolinha")
+		if bce:
+			bce.visible = GameManager.ingredientes_desbloqueados["cebolinha"]
+		var bge: Node = hbox_preparo.get_node_or_null("BtnPrepGergelim")
+		if bge:
+			bge.visible = GameManager.ingredientes_desbloqueados["gergelim"]
+		var bcr: Node = hbox_preparo.get_node_or_null("BtnPrepCreamCheese")
+		if bcr:
+			bcr.visible = GameManager.ingredientes_desbloqueados["cream_cheese"]
+	if is_instance_valid(vbox_fritura):
+		vbox_fritura.visible = GameManager.ingredientes_desbloqueados["massa_empanar"]
 
 func _atualizar_visibilidade_controles_turno() -> void:
-	# Esconde ações que não fazem sentido no estado atual (ex.: Entregar com restaurante fechado).
-	var btn_entregar: Button = $VBoxContainer/BtnEntregar
-	var btn_lixeira: Button = get_node_or_null("VBoxContainer/BtnLixeira") as Button
-	var hbox_ing: Control = $DockIngredientes
-	var grupo_preparo_bancada: Array[Control] = [
-		$VBoxContainer/MarginContainerEstoque,
-		$VBoxContainer/BtnTabua,
-		$VBoxContainer/HBoxPreparo,
-		$VBoxContainer/SpacerBancada,
-		$VBoxContainer/HBoxBancadaEFritura,
-	]
+	if not is_instance_valid(btn_entregar):
+		_atualizar_visibilidade_btn_negar_pedido()
+		return
+
+	var btn_lixeira: Button = null
+	if is_instance_valid(_estacao_montagem):
+		btn_lixeira = _estacao_montagem.get_node_or_null("VBoxColunaMontagem/BtnLixeira") as Button
+		if btn_lixeira == null:
+			btn_lixeira = _estacao_montagem.find_child("BtnLixeira", true, false) as Button
+
+	var hbox_ing: Control = dock_ingredientes
 
 	if _jogo_finalizado:
 		btn_entregar.hide()
 		if is_instance_valid(btn_lixeira):
 			btn_lixeira.hide()
 		btn_entregar.disabled = false
-		hbox_ing.hide()
-		for n in grupo_preparo_bancada:
-			n.hide()
+		if is_instance_valid(hbox_ing):
+			hbox_ing.hide()
+		for n in _grupo_area_trabalho:
+			if is_instance_valid(n):
+				n.hide()
+		_atualizar_visibilidade_btn_negar_pedido()
 		return
 
 	var painel_bloqueando: bool = painel_resumo.visible or painel_loja.visible
@@ -370,13 +660,17 @@ func _atualizar_visibilidade_controles_turno() -> void:
 		if is_instance_valid(btn_lixeira):
 			btn_lixeira.hide()
 		btn_entregar.disabled = false
-		hbox_ing.hide()
-		for n in grupo_preparo_bancada:
-			n.hide()
+		if is_instance_valid(hbox_ing):
+			hbox_ing.hide()
+		for n in _grupo_area_trabalho:
+			if is_instance_valid(n):
+				n.hide()
+		_atualizar_visibilidade_btn_negar_pedido()
 		return
 
-	for n in grupo_preparo_bancada:
-		n.show()
+	for n in _grupo_area_trabalho:
+		if is_instance_valid(n):
+			n.show()
 
 	match estado_atual:
 		EstadoTurno.PREPARANDO:
@@ -384,28 +678,34 @@ func _atualizar_visibilidade_controles_turno() -> void:
 			if is_instance_valid(btn_lixeira):
 				btn_lixeira.hide()
 			btn_entregar.disabled = false
-			hbox_ing.hide()
+			if is_instance_valid(hbox_ing):
+				hbox_ing.hide()
 		EstadoTurno.ABERTO:
 			var em_pedido: bool = order_manager.cliente_ativo
 			btn_entregar.visible = em_pedido
 			if is_instance_valid(btn_lixeira):
 				btn_lixeira.visible = em_pedido
 			btn_entregar.disabled = false
-			hbox_ing.visible = em_pedido
+			if is_instance_valid(hbox_ing):
+				hbox_ing.visible = em_pedido
 		EstadoTurno.FECHADO:
 			btn_entregar.hide()
 			if is_instance_valid(btn_lixeira):
 				btn_lixeira.hide()
 			btn_entregar.disabled = false
-			hbox_ing.hide()
-			for n in grupo_preparo_bancada:
-				n.hide()
+			if is_instance_valid(hbox_ing):
+				hbox_ing.hide()
+			for n in _grupo_area_trabalho:
+				if is_instance_valid(n):
+					n.hide()
 
 	_atualizar_visibilidade_ingredientes_e_preparo()
+	_atualizar_visibilidade_btn_negar_pedido()
 
 func _set_botoes_preparo_desabilitados(desabilitar: bool) -> void:
-	var h := $VBoxContainer/HBoxPreparo
-	for c in h.get_children():
+	if not is_instance_valid(hbox_preparo):
+		return
+	for c in hbox_preparo.get_children():
 		if c is Button:
 			(c as Button).disabled = desabilitar
 
@@ -413,6 +713,8 @@ func _iniciar_preparo(item: String, segundos: float = 3.0) -> void:
 	if _jogo_finalizado:
 		return
 	if _prep_em_andamento:
+		return
+	if not is_instance_valid(progress_bar_prep):
 		return
 	if not GameManager.ingredientes_desbloqueados.get(item, false):
 		return
@@ -437,7 +739,8 @@ func _finalizar_preparo(item: String) -> void:
 		var dados_item: Dictionary = GameManager.MERCADO.get(item, {})
 		var nome_item: String = str(dados_item.get("nome", item))
 		print("Dinheiro insuficiente para comprar: %s" % nome_item)
-	progress_bar_prep.visible = false
+	if is_instance_valid(progress_bar_prep):
+		progress_bar_prep.visible = false
 	_set_botoes_preparo_desabilitados(false)
 	_prep_em_andamento = false
 	atualizar_hud()
@@ -465,7 +768,8 @@ func abrir_restaurante() -> void:
 		return
 	if estado_atual != EstadoTurno.PREPARANDO: return
 	estado_atual = EstadoTurno.ABERTO
-	$BtnAbrir.hide()
+	if is_instance_valid(btn_abrir):
+		btn_abrir.hide()
 	label_pedido.text = "Restaurante Aberto!"
 	label_status.text = "Aguardando o primeiro cliente..."
 	_atualizar_visibilidade_controles_turno()
@@ -475,6 +779,8 @@ func atualizar_hud() -> void:
 	label_hud.text = "Dinheiro: R$ %.2f | Reputação: %.1f | Combo: %d" % [GameManager.dinheiro_atual, GameManager.reputacao, GameManager.combos_consecutivos]
 
 func _aplicar_textura_cliente(tex: Texture2D) -> void:
+	if not is_instance_valid(sprite_cliente):
+		return
 	var escala := 1.0
 	if is_instance_valid(order_manager) and order_manager.cliente_ativo and order_manager.cliente_atual != null:
 		escala = clampf(order_manager.cliente_atual.escala_retrato_ui, 0.5, 2.0)
@@ -483,6 +789,8 @@ func _aplicar_textura_cliente(tex: Texture2D) -> void:
 	sprite_cliente.texture = tex
 
 func _limpar_textura_cliente_sprite() -> void:
+	if not is_instance_valid(sprite_cliente):
+		return
 	sprite_cliente.texture = null
 	sprite_cliente.scale = Vector2.ONE
 
@@ -497,7 +805,10 @@ func _on_pedido_gerado(nome_cliente: String, fala_recepcao: String, nome_sushi: 
 		_aplicar_textura_cliente(textura)
 	else:
 		var placeholder := PlaceholderTexture2D.new()
-		placeholder.size = sprite_cliente.custom_minimum_size
+		if is_instance_valid(sprite_cliente):
+			placeholder.size = sprite_cliente.custom_minimum_size
+		else:
+			placeholder.size = Vector2(280, 380)
 		_aplicar_textura_cliente(placeholder)
 
 	atualizar_hud()
@@ -513,13 +824,17 @@ func _on_ingrediente_adicionado(_ing: String) -> void:
 		_esconder_sushi_pronto()
 
 func _on_montagem_atualizada(array_montagem_atual: Array) -> void:
-	var label_montagem: Label = get_node_or_null("VBoxContainer/LabelMontagemAtual") as Label
+	var label_montagem: Label = null
+	if is_instance_valid(_estacao_montagem):
+		label_montagem = _estacao_montagem.get_node_or_null("VBoxColunaMontagem/LabelMontagemAtual") as Label
 	if not is_instance_valid(label_montagem):
 		return
 	label_montagem.text = "Montagem: %s" % _formatar_montagem_para_label(array_montagem_atual)
 
 func _on_montagem_limpa() -> void:
-	var label_montagem: Label = get_node_or_null("VBoxContainer/LabelMontagemAtual") as Label
+	var label_montagem: Label = null
+	if is_instance_valid(_estacao_montagem):
+		label_montagem = _estacao_montagem.get_node_or_null("VBoxColunaMontagem/LabelMontagemAtual") as Label
 	if not is_instance_valid(label_montagem):
 		return
 	label_montagem.text = "Montagem: -"
@@ -561,6 +876,8 @@ func _nome_receita_para_arte_sushi_pronto() -> String:
 	return order_manager.pedido_atual_nome
 
 func _set_pilha_visual_ativa(ativa: bool) -> void:
+	if not is_instance_valid(bancada):
+		return
 	# Mostra/esconde apenas as "fatias" visuais (ColorRect) criadas pelo DropZone.
 	for child in bancada.get_children():
 		if child is ColorRect:
@@ -587,6 +904,8 @@ func _get_cor_sushi_pronto(nome: String) -> Color:
 			return Color(1.0, 1.0, 1.0, 1.0)
 
 func _mostrar_sushi_finalizado(nome: String) -> void:
+	if not is_instance_valid(sprite_sushi_pronto):
+		return
 	# Visualiza o sushi pronto e "transforma" a pilha: esconde as fatias da bancada.
 	var path: String = TEXTURAS_SUSHIS.get(nome, "")
 	# Se existir a arte pronta, usa; senão, cai no fallback visual.
@@ -617,12 +936,16 @@ func _limpar_pilha_visual() -> void:
 	# Usado no fim do pedido (entregue/tempo esgotado).
 	# Mantém a cena limpa até o DropZone destruir as fatias no próximo pedido.
 	_esconder_sushi_pronto()
+	if not is_instance_valid(bancada):
+		return
 	for child in bancada.get_children():
 		if child is ColorRect:
 			(child as ColorRect).visible = false
 
 func _gerar_feedback_visual(sucesso: bool) -> void:
 	# "Game Juice": pequenos ícones voam do cliente para o HUD.
+	if not is_instance_valid(sprite_cliente):
+		return
 	var cor := Color.GOLD if sucesso else Color.DARK_GRAY
 	var quantidade := 5 if sucesso else 2
 
@@ -654,7 +977,8 @@ func _on_pedido_entregue(sucesso: bool, dinheiro: float, estrelas: float) -> voi
 		return
 	_gerar_feedback_visual(sucesso)
 	_entrega_em_andamento = false
-	barra_tempo.hide()
+	if is_instance_valid(barra_tempo):
+		barra_tempo.hide()
 	_limpar_textura_cliente_sprite()
 
 	if sucesso:
@@ -672,7 +996,8 @@ func _on_pedido_entregue(sucesso: bool, dinheiro: float, estrelas: float) -> voi
 func _on_tempo_esgotado() -> void:
 	if _jogo_finalizado:
 		return
-	barra_tempo.hide()
+	if is_instance_valid(barra_tempo):
+		barra_tempo.hide()
 	_limpar_textura_cliente_sprite()
 
 	label_status.text = "Tempo esgotado!"
@@ -707,7 +1032,7 @@ func _on_btn_entregar_pressed() -> void:
 		return
 
 	# Se o sushi pronto estiver visível, animamos a entrega antes de entregar.
-	if sprite_sushi_pronto.visible and is_instance_valid(sprite_sushi_pronto):
+	if is_instance_valid(sprite_sushi_pronto) and sprite_sushi_pronto.visible and is_instance_valid(sprite_cliente):
 		var tween := create_tween()
 		# Voar em direção ao cliente (na prática: animação global).
 		var alvo: Vector2 = sprite_cliente.global_position
@@ -782,7 +1107,10 @@ func _on_restaurante_falido() -> void:
 	# Bloqueia UI e evita ações/timers do turno atual.
 	painel_resumo.hide()
 	painel_loja.hide()
-	$BtnAbrir.hide()
+	if is_instance_valid(_barra_navegacao_estacoes):
+		_barra_navegacao_estacoes.hide()
+	if is_instance_valid(btn_abrir):
+		btn_abrir.hide()
 	_set_botoes_preparo_desabilitados(true)
 	_atualizar_visibilidade_controles_turno()
 
