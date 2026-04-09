@@ -3,7 +3,11 @@ class_name ClienteGabriela
 
 func _init() -> void:
 	nome = "Gabriela"
-	escala_retrato_ui = 1.32
+	# Zoom maior que o default; slot mais alto e mais “subida” para não ficar atrás do balcão.
+	escala_retrato_ui = 1.45
+	fracao_retrato_tronco = 0.60
+	retrato_altura_slot_mul = 1.18
+	retrato_subir_extra_px = 74.0
 	falas_recepcao = [
 		"Boa noite. Um %s. Sem alterações.",
 		"Com licença. Um %s, por favor. E seja rápido."

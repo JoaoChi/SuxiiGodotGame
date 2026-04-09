@@ -3,7 +3,12 @@ class_name ClienteCasal
 
 func _init() -> void:
 	nome = "João e Milena"
-	escala_retrato_ui = 1.38
+	# Dois rostos: arte larga + zoom maior; slot mais alto e sobe o quadro para aparecer acima do balcão.
+	escala_retrato_ui = 1.4
+	fracao_retrato_tronco = 0.62
+	retrato_largura_mul = 2.55
+	retrato_altura_slot_mul = 1.16
+	retrato_subir_extra_px = 67.0
 	falas_recepcao = [
 		"João: Boa noite, vai ser um %s e um hambúrguer pra ela. Como assim não tem hambúrguer?? Milena: Aff ta, pode ser o mesmo!",
 		"Milena: Eu jurava que era hambúrguer… João: Tá, tudo bem. Vamos de %s então, por favor."

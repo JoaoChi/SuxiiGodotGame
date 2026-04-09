@@ -18,6 +18,16 @@ const TEXTURAS_SUSHIS: Dictionary = {
 
 const TEX_FUNDO_FRITURA: Texture2D = preload("res://assets/textures/fritadeira.png")
 const TEX_FUNDO_ESTOQUE: Texture2D = preload("res://assets/textures/estoque.png")
+## Retrato no balcão: zoom extra sobre `escala_retrato_ui` e deslocamento para cima (px na tela).
+const RETRATO_BALCAO_ESCALA_EXTRA := 0.70
+const RETRATO_SUBIR_PX := 290.0
+## Margem extra na base da coluna do atendimento (sobe Aceitar/Negar em relação ao rodapé).
+const COLUNA_ATEND_MARGEM_EXTRA_INFERIOR := 138.0
+## Mesmas margens da coluna principal (texto + botões): retrato usa só esq/dir para ficar no mesmo eixo vertical.
+const COLUNA_PRINCIPAL_OFFSET_ESQ := 20.0
+const COLUNA_PRINCIPAL_OFFSET_DIR := -136.0
+const COLUNA_PRINCIPAL_OFFSET_TOP := 96.0
+const COLUNA_PRINCIPAL_OFFSET_BOT := -148.0
 
 @onready var label_hud: Label = $HUDSuperior/HBoxHUD/PainelHUDDinheiro/LabelHUDUX
 @onready var label_status: Label = $HUDSuperior/HBoxHUD/LabelStatusUX
@@ -118,10 +128,10 @@ func _criar_container_estacao(nome: String) -> Control:
 
 func _aplicar_preset_coluna_principal(v: Control) -> void:
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
-	v.offset_left = 20.0
-	v.offset_top = 96.0
-	v.offset_right = -136.0
-	v.offset_bottom = -148.0
+	v.offset_left = COLUNA_PRINCIPAL_OFFSET_ESQ
+	v.offset_top = COLUNA_PRINCIPAL_OFFSET_TOP
+	v.offset_right = COLUNA_PRINCIPAL_OFFSET_DIR
+	v.offset_bottom = COLUNA_PRINCIPAL_OFFSET_BOT
 
 
 func _criar_label_lista_ingredientes_pedido() -> Label:
@@ -165,47 +175,40 @@ func _definir_instrucao_balcao(texto: String, visivel: bool) -> void:
 
 
 func _aplicar_estilo_botao_destaque(botao: Button, cor_fundo: Color) -> void:
+	# Mesma linguagem do tema global (borda dourada, cantos 4), com fundo semântico (verde/vermelho).
 	botao.custom_minimum_size = Vector2(0, 52)
 	botao.focus_mode = Control.FOCUS_NONE
+	var borda := Color(0.9, 0.6, 0.15, 0.9)
+	var borda_h := Color(1.0, 0.75, 0.35, 1.0)
+	var borda_p := Color(0.75, 0.5, 0.15, 0.9)
 	var sb_n := StyleBoxFlat.new()
 	sb_n.bg_color = cor_fundo
-	sb_n.border_color = cor_fundo.lightened(0.38)
 	sb_n.set_border_width_all(2)
-	sb_n.set_corner_radius_all(10)
+	sb_n.border_color = borda
+	sb_n.set_corner_radius_all(4)
 	sb_n.content_margin_left = 18
 	sb_n.content_margin_top = 14
 	sb_n.content_margin_right = 18
 	sb_n.content_margin_bottom = 14
 	botao.add_theme_stylebox_override("normal", sb_n)
 	var sb_h: StyleBoxFlat = sb_n.duplicate()
-	sb_h.bg_color = cor_fundo.lightened(0.1)
+	sb_h.bg_color = cor_fundo.lightened(0.12)
+	sb_h.border_color = borda_h
 	botao.add_theme_stylebox_override("hover", sb_h)
 	var sb_p: StyleBoxFlat = sb_n.duplicate()
-	sb_p.bg_color = cor_fundo.darkened(0.12)
+	sb_p.bg_color = cor_fundo.darkened(0.18)
+	sb_p.border_color = borda_p
 	botao.add_theme_stylebox_override("pressed", sb_p)
-	botao.add_theme_color_override("font_color", Color(0.96, 0.97, 0.99))
+	botao.add_theme_color_override("font_color", Color(0.95, 0.75, 0.35, 1))
+	botao.add_theme_color_override("font_hover_color", Color(1, 0.9, 0.6, 1))
+	botao.add_theme_color_override("font_pressed_color", Color(0.85, 0.65, 0.25, 1))
 	botao.add_theme_font_size_override("font_size", 18)
 
 
 func _aplicar_estilo_botao_navegacao(botao: Button) -> void:
-	botao.custom_minimum_size = Vector2(0, 44)
+	# Estilo base vem de `game_theme.tres` (projeto); só ajustamos tamanho mínimo.
+	botao.custom_minimum_size = Vector2(0, 48)
 	botao.focus_mode = Control.FOCUS_NONE
-	var c := Color(0.26, 0.28, 0.32)
-	var sb_n := StyleBoxFlat.new()
-	sb_n.bg_color = c
-	sb_n.border_color = c.lightened(0.35)
-	sb_n.set_border_width_all(1)
-	sb_n.set_corner_radius_all(6)
-	sb_n.set_content_margin_all(10)
-	botao.add_theme_stylebox_override("normal", sb_n)
-	var sb_h: StyleBoxFlat = sb_n.duplicate()
-	sb_h.bg_color = c.lightened(0.1)
-	botao.add_theme_stylebox_override("hover", sb_h)
-	var sb_p: StyleBoxFlat = sb_n.duplicate()
-	sb_p.bg_color = c.darkened(0.08)
-	botao.add_theme_stylebox_override("pressed", sb_p)
-	botao.add_theme_color_override("font_color", Color(0.94, 0.95, 0.97))
-	botao.add_theme_font_size_override("font_size", 15)
 
 
 func _configurar_containers_estacoes_e_navegacao() -> void:
@@ -238,7 +241,6 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	if is_instance_valid(dock_ingredientes):
 		vbox_ingredientes = dock_ingredientes.get_node_or_null("VBoxIngredientes") as VBoxContainer
 
-	sprite_cliente = get_node_or_null("SpriteCliente") as TextureRect
 	var painel_dialogo_n: Node = get_node_or_null("PainelDialogo")
 	if painel_dialogo_n != null:
 		label_dialogo = painel_dialogo_n.get_node_or_null("LabelDialogoUX") as Label
@@ -248,6 +250,7 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	_estacao_atendimento = get_node_or_null("EstacaoAtendimento") as Control
 	if not is_instance_valid(_estacao_atendimento):
 		_estacao_atendimento = SCENE_ESTACAO_ATENDIMENTO.instantiate() as Control
+	sprite_cliente = _estacao_atendimento.get_node_or_null("RetratoClienteClip/SpriteCliente") as TextureRect
 	_estacao_preparo = _criar_container_estacao("EstacaoPreparo")
 	_estacao_montagem = _criar_container_estacao("EstacaoMontagem")
 	_estacao_fritura = _criar_container_estacao("EstacaoFritura")
@@ -266,6 +269,7 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	vbox_atend.z_as_relative = false
 	vbox_atend.add_theme_constant_override("separation", 12)
 	_aplicar_preset_coluna_principal(vbox_atend)
+	vbox_atend.offset_bottom -= COLUNA_ATEND_MARGEM_EXTRA_INFERIOR
 	_estacao_atendimento.add_child(vbox_atend)
 
 	if is_instance_valid(label_pedido):
@@ -284,39 +288,59 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	_label_instrucao_balcao.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox_atend.add_child(_label_instrucao_balcao)
 
+	if is_instance_valid(barra_tempo):
+		barra_tempo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		barra_tempo.reparent(vbox_atend)
+
+	var spacer_rodape_atend := Control.new()
+	spacer_rodape_atend.name = "SpacerRodapeBotoesAtendimento"
+	spacer_rodape_atend.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer_rodape_atend.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox_atend.add_child(spacer_rodape_atend)
+
+	var hbox_botoes_pedido := HBoxContainer.new()
+	hbox_botoes_pedido.name = "HBoxBotoesPedido"
+	hbox_botoes_pedido.add_theme_constant_override("separation", 16)
+	hbox_botoes_pedido.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox_botoes_pedido.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox_botoes_pedido.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+
+	var largura_btn_pedido := 220.0
+	var altura_btn_pedido := 48.0
+
 	_btn_aceitar_pedido = Button.new()
 	_btn_aceitar_pedido.name = "BtnAceitarPedido"
 	_btn_aceitar_pedido.text = "Aceitar Pedido"
-	_btn_aceitar_pedido.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_btn_aceitar_pedido.custom_minimum_size = Vector2(largura_btn_pedido, altura_btn_pedido)
 	_btn_aceitar_pedido.visible = false
 	_btn_aceitar_pedido.mouse_filter = Control.MOUSE_FILTER_STOP
 	_btn_aceitar_pedido.pressed.connect(_on_btn_aceitar_pedido_pressed)
 	_aplicar_estilo_botao_destaque(_btn_aceitar_pedido, Color(0.16, 0.46, 0.34))
-	vbox_atend.add_child(_btn_aceitar_pedido)
+	hbox_botoes_pedido.add_child(_btn_aceitar_pedido)
 
 	_btn_negar_pedido = Button.new()
 	_btn_negar_pedido.name = "BtnNegarPedido"
 	_btn_negar_pedido.text = "Negar Pedido"
-	_btn_negar_pedido.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_btn_negar_pedido.custom_minimum_size = Vector2(largura_btn_pedido, altura_btn_pedido)
 	_btn_negar_pedido.visible = false
 	_btn_negar_pedido.mouse_filter = Control.MOUSE_FILTER_STOP
 	_btn_negar_pedido.pressed.connect(_on_btn_negar_pedido_pressed)
 	_aplicar_estilo_botao_destaque(_btn_negar_pedido, Color(0.4, 0.22, 0.22))
-	vbox_atend.add_child(_btn_negar_pedido)
+	hbox_botoes_pedido.add_child(_btn_negar_pedido)
 
-	if is_instance_valid(barra_tempo):
-		barra_tempo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		barra_tempo.reparent(vbox_atend)
+	vbox_atend.add_child(hbox_botoes_pedido)
 
 	_barras_tempo_pedido.clear()
 	if is_instance_valid(barra_tempo):
 		_registrar_barra_tempo_pedido(barra_tempo)
 
 	if is_instance_valid(sprite_cliente):
-		sprite_cliente.reparent(_estacao_atendimento)
 		sprite_cliente.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		# Escala do retrato vem de escala_retrato_ui; pivô no centro mantém o cliente no meio da visão.
-		sprite_cliente.pivot_offset = 0.5 * sprite_cliente.custom_minimum_size
+		var clip_retrato := sprite_cliente.get_parent() as Control
+		if clip_retrato != null:
+			clip_retrato.offset_left = COLUNA_PRINCIPAL_OFFSET_ESQ
+			clip_retrato.offset_right = COLUNA_PRINCIPAL_OFFSET_DIR
+		_atualizar_pivote_retrato_cliente()
 	if painel_dialogo_n != null:
 		painel_dialogo_n.reparent(_estacao_atendimento)
 		if painel_dialogo_n is Control:
@@ -376,16 +400,20 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 
 	if is_instance_valid(btn_entregar):
 		btn_entregar.reparent(vbox_mont)
+	# Espaço flexível *acima* do texto de montagem: empurra o feedback para baixo (abaixo da área dos sushis).
+	if is_instance_valid(spacer_bancada):
+		spacer_bancada.reparent(vbox_mont)
+		spacer_bancada.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		spacer_bancada.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var label_montagem_n: Node = vbox_legacy.get_node_or_null("LabelMontagemAtual")
 	if is_instance_valid(label_montagem_n):
 		label_montagem_n.reparent(vbox_mont)
-	if is_instance_valid(spacer_bancada):
-		spacer_bancada.reparent(vbox_mont)
 	var btn_lixeira_n: Node = vbox_legacy.get_node_or_null("BtnLixeira")
 	if is_instance_valid(btn_lixeira_n):
 		btn_lixeira_n.reparent(vbox_mont)
 		if btn_lixeira_n is Button:
 			(btn_lixeira_n as Button).mouse_filter = Control.MOUSE_FILTER_STOP
+		_envolver_lixeira_rodape_montagem(vbox_mont)
 
 	var fundo_fritura := TextureRect.new()
 	fundo_fritura.name = "FundoFrituraEstacao"
@@ -448,11 +476,13 @@ func _criar_barra_navegacao_inferior() -> void:
 	var nav := HBoxContainer.new()
 	nav.name = "BarraNavegacaoEstacoes"
 	nav.z_index = 25
-	nav.custom_minimum_size = Vector2(0, 52)
-	nav.add_theme_constant_override("separation", 8)
+	nav.custom_minimum_size = Vector2(0, 54)
+	nav.add_theme_constant_override("separation", 10)
 	nav.alignment = BoxContainer.ALIGNMENT_CENTER
 	nav.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	nav.offset_top = -56.0
+	nav.offset_left = 14.0
+	nav.offset_right = -14.0
+	nav.offset_top = -58.0
 	nav.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(nav)
 	_barra_navegacao_estacoes = nav
@@ -488,11 +518,26 @@ func mudar_estacao(nome_estacao: String) -> void:
 			ctrl.visible = (chave == nome_estacao)
 
 	_atualizar_visibilidade_botoes_balcao_pedido()
+	_atualizar_visibilidade_btn_abrir_restaurante()
 
 
 func _atualizar_visibilidade_botoes_balcao_pedido() -> void:
 	_atualizar_visibilidade_btn_aceitar_pedido()
 	_atualizar_visibilidade_btn_negar_pedido()
+
+
+func _atualizar_visibilidade_btn_abrir_restaurante() -> void:
+	if not is_instance_valid(btn_abrir):
+		return
+	var na_balcao: bool = _estacao_atual == ESTACAO_ATENDIMENTO
+	var bloqueado_painel: bool = painel_resumo.visible or painel_loja.visible or painel_game_over.visible
+	var mostrar: bool = (
+		na_balcao
+		and not _jogo_finalizado
+		and not bloqueado_painel
+		and estado_atual == EstadoTurno.PREPARANDO
+	)
+	btn_abrir.visible = mostrar
 
 
 func _atualizar_visibilidade_btn_aceitar_pedido() -> void:
@@ -632,7 +677,7 @@ func _injetar_feedback_montagem_e_lixeira() -> void:
 		var btn_lixeira := Button.new()
 		btn_lixeira.name = "BtnLixeira"
 		btn_lixeira.text = "🗑️ Jogar Fora"
-		btn_lixeira.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_layout_botao_lixeira_montagem(btn_lixeira)
 		btn_lixeira.mouse_filter = Control.MOUSE_FILTER_STOP
 		btn_lixeira.focus_mode = Control.FOCUS_NONE
 		var btn_entregar: Button = get_node_or_null("VBoxContainer/BtnEntregar") as Button
@@ -640,6 +685,37 @@ func _injetar_feedback_montagem_e_lixeira() -> void:
 		if is_instance_valid(btn_entregar):
 			vbox_principal.move_child(btn_lixeira, btn_entregar.get_index() + 1)
 		btn_lixeira.pressed.connect(_on_lixeira_pressed)
+
+
+func _layout_botao_lixeira_montagem(btn: Button) -> void:
+	btn.custom_minimum_size = Vector2(228, 52)
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+
+func _envolver_lixeira_rodape_montagem(vbox_mont: VBoxContainer) -> void:
+	var wrap_existente := vbox_mont.get_node_or_null("HBoxLixeiraMontagem") as HBoxContainer
+	if is_instance_valid(wrap_existente):
+		var btn_ex := wrap_existente.get_node_or_null("BtnLixeira") as Button
+		if btn_ex:
+			_layout_botao_lixeira_montagem(btn_ex)
+		return
+	var lixeira := vbox_mont.get_node_or_null("BtnLixeira") as Button
+	if lixeira == null or lixeira.get_parent() != vbox_mont:
+		return
+	_layout_botao_lixeira_montagem(lixeira)
+	var row := HBoxContainer.new()
+	row.name = "HBoxLixeiraMontagem"
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var idx := lixeira.get_index()
+	vbox_mont.remove_child(lixeira)
+	row.add_child(lixeira)
+	vbox_mont.add_child(row)
+	vbox_mont.move_child(row, idx)
+
 
 func _injetar_botoes_ferramentas() -> void:
 	if not is_instance_valid(vbox_ingredientes):
@@ -750,8 +826,7 @@ func _atualizar_ui_preparacao_turno() -> void:
 	_atualizar_texto_lista_ingredientes_pedido("", false)
 	_definir_instrucao_balcao("", false)
 	_limpar_textura_cliente_sprite()
-	if is_instance_valid(btn_abrir):
-		btn_abrir.show()
+	_atualizar_visibilidade_btn_abrir_restaurante()
 	atualizar_hud()
 	atualizar_label_estoque()
 	_atualizar_visibilidade_controles_turno()
@@ -1056,6 +1131,7 @@ func _atualizar_visibilidade_ingredientes_e_preparo() -> void:
 func _atualizar_visibilidade_controles_turno() -> void:
 	if not is_instance_valid(btn_entregar):
 		_atualizar_visibilidade_botoes_balcao_pedido()
+		_atualizar_visibilidade_btn_abrir_restaurante()
 		return
 
 	var btn_lixeira: Button = null
@@ -1077,6 +1153,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 			if is_instance_valid(n):
 				n.hide()
 		_atualizar_visibilidade_botoes_balcao_pedido()
+		_atualizar_visibilidade_btn_abrir_restaurante()
 		return
 
 	var painel_bloqueando: bool = painel_resumo.visible or painel_loja.visible
@@ -1091,6 +1168,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 			if is_instance_valid(n):
 				n.hide()
 		_atualizar_visibilidade_botoes_balcao_pedido()
+		_atualizar_visibilidade_btn_abrir_restaurante()
 		return
 
 	for n in _grupo_area_trabalho:
@@ -1127,6 +1205,7 @@ func _atualizar_visibilidade_controles_turno() -> void:
 
 	_atualizar_visibilidade_ingredientes_e_preparo()
 	_atualizar_visibilidade_botoes_balcao_pedido()
+	_atualizar_visibilidade_btn_abrir_restaurante()
 
 func _set_botoes_preparo_desabilitados(desabilitar: bool) -> void:
 	if not is_instance_valid(hbox_preparo):
@@ -1206,21 +1285,67 @@ func abrir_restaurante() -> void:
 func atualizar_hud() -> void:
 	label_hud.text = "Dinheiro: R$ %.2f | Reputação: %.1f | Combo: %d" % [GameManager.dinheiro_atual, GameManager.reputacao, GameManager.combos_consecutivos]
 
+func _atualizar_pivote_retrato_cliente() -> void:
+	if not is_instance_valid(sprite_cliente):
+		return
+	var w: float = sprite_cliente.custom_minimum_size.x
+	if sprite_cliente.size.x > 1.0:
+		w = sprite_cliente.size.x
+	# Linha do balcão = borda inferior do RetratoClienteClip, em Y local (−offset_top ao partir do topo do sprite).
+	var linha_balcao_y: float = maxf(0.0, -sprite_cliente.offset_top)
+	sprite_cliente.pivot_offset = Vector2(w * 0.5, linha_balcao_y)
+
+func _textura_retrato_tronco(tex: Texture2D) -> Texture2D:
+	if tex == null:
+		return tex
+	var sz := tex.get_size()
+	if sz.y < 2.0:
+		return tex
+	var frac := 0.56
+	if is_instance_valid(order_manager) and order_manager.cliente_atual != null:
+		frac = clampf(order_manager.cliente_atual.fracao_retrato_tronco, 0.35, 0.85)
+	var altura := maxi(1, int(roundf(sz.y * frac)))
+	var atlas := AtlasTexture.new()
+	atlas.atlas = tex
+	atlas.region = Rect2i(0, 0, int(sz.x), altura)
+	return atlas
+
 func _aplicar_textura_cliente(tex: Texture2D) -> void:
 	if not is_instance_valid(sprite_cliente):
 		return
 	var escala := 1.0
 	if is_instance_valid(order_manager) and order_manager.cliente_ativo and order_manager.cliente_atual != null:
-		escala = clampf(order_manager.cliente_atual.escala_retrato_ui, 0.5, 2.0)
-	sprite_cliente.scale = Vector2(escala, escala)
+		escala = clampf(order_manager.cliente_atual.escala_retrato_ui, 0.5, 2.5)
+	escala *= RETRATO_BALCAO_ESCALA_EXTRA
+	# Evita Control.scale: em Godot o desenho escalado pode ignorar o clip e cobrir botões/diálogo.
+	sprite_cliente.scale = Vector2.ONE
+	var base_w := 360.0
+	var base_up := 620.0
+	var base_down := 140.0
+	var base_min_h := 560.0
+	var subir: float = RETRATO_SUBIR_PX
+	var lm := 1.0
+	var am := 1.0
+	if is_instance_valid(order_manager) and order_manager.cliente_ativo and order_manager.cliente_atual != null:
+		var cli: ClienteData = order_manager.cliente_atual
+		lm = clampf(cli.retrato_largura_mul, 0.35, 2.2)
+		am = clampf(cli.retrato_altura_slot_mul, 0.45, 1.55)
+		subir += cli.retrato_subir_extra_px
+	sprite_cliente.custom_minimum_size = Vector2(base_w * lm * escala, base_min_h * am * escala)
+	sprite_cliente.offset_top = -base_up * am * escala - subir
+	sprite_cliente.offset_bottom = base_down * am * escala - subir
+	_atualizar_pivote_retrato_cliente()
 	sprite_cliente.modulate = Color.WHITE
-	sprite_cliente.texture = tex
+	sprite_cliente.texture = _textura_retrato_tronco(tex)
 
 func _limpar_textura_cliente_sprite() -> void:
 	if not is_instance_valid(sprite_cliente):
 		return
 	sprite_cliente.texture = null
 	sprite_cliente.scale = Vector2.ONE
+	sprite_cliente.custom_minimum_size = Vector2(360, 560)
+	sprite_cliente.offset_top = -620.0 - RETRATO_SUBIR_PX
+	sprite_cliente.offset_bottom = 140.0 - RETRATO_SUBIR_PX
 
 func _on_pedido_gerado(nome_cliente: String, fala_recepcao: String, nome_sushi: String, tempo_limite: float, textura: Texture2D) -> void:
 	if estado_atual != EstadoTurno.ABERTO: return

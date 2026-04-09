@@ -63,15 +63,20 @@ func gerar_novo_pedido() -> void:
 	if receitas_possiveis.is_empty():
 		receitas_possiveis = ["Sashimi"]
 
-	# 2. Chance do Jôw aparecer a partir do Dia 3
-	var sorteio_jow := randf() < 0.20 and GameManager.dia_atual >= 3
+	var tipo_anterior := ""
+	if cliente_atual != null:
+		tipo_anterior = _tipo_cliente_atual()
 
-	# Seleciona o cliente (mantendo a lógica anterior)
+	# 2. Chance do Jôw aparecer a partir do Dia 3 (nunca em seguida do próprio Jôw)
+	var sorteio_jow := randf() < 0.20 and GameManager.dia_atual >= 3
+	if sorteio_jow and tipo_anterior == "ClienteJow":
+		sorteio_jow = false
+
+	# Seleciona o cliente
 	if sorteio_jow:
 		cliente_atual = ClienteJow.new()
 	else:
-		# Evita Jôw fora da chance definida (senão a rivalidade fica imprevisível demais)
-		cliente_atual = _pick_cliente_nao_jow()
+		cliente_atual = _pick_cliente_nao_jow(tipo_anterior)
 
 	# Define a quantidade de sushis por pedido conforme o dia
 	var qtd_itens := 1
@@ -120,11 +125,18 @@ func aceitar_pedido() -> void:
 	pedido_aceito = true
 	timer_pedido.start(tempo_limite_atual)
 
-func _pick_cliente_nao_jow() -> ClienteData:
+func _pick_cliente_nao_jow(excluir_mesmo_tipo: String = "") -> ClienteData:
 	var candidatos: Array[ClienteData] = []
 	for c in pool_clientes:
-		if not (c is ClienteJow):
-			candidatos.append(c)
+		if c is ClienteJow:
+			continue
+		if excluir_mesmo_tipo != "" and _tipo_de_cliente_data(c) == excluir_mesmo_tipo:
+			continue
+		candidatos.append(c)
+	if candidatos.is_empty():
+		for c in pool_clientes:
+			if not (c is ClienteJow):
+				candidatos.append(c)
 	if candidatos.is_empty():
 		return ClienteJow.new()
 	return candidatos.pick_random()
@@ -237,18 +249,24 @@ func _get_receitas_possiveis(receitas_liberadas: Array = []) -> Array:
 	return possiveis
 
 
+func _tipo_de_cliente_data(c: ClienteData) -> String:
+	if c == null:
+		return ""
+	if c is ClienteJow:
+		return "ClienteJow"
+	if c is ClienteJoao:
+		return "ClienteJoao"
+	if c is ClienteGabriela:
+		return "ClienteGabriela"
+	if c is ClienteCasal:
+		return "ClienteCasal"
+	return "ClienteAmanda"
+
+
 func _tipo_cliente_atual() -> String:
 	if cliente_atual == null:
 		return "ClienteAmanda"
-	if cliente_atual is ClienteJow:
-		return "ClienteJow"
-	if cliente_atual is ClienteJoao:
-		return "ClienteJoao"
-	if cliente_atual is ClienteGabriela:
-		return "ClienteGabriela"
-	if cliente_atual is ClienteCasal:
-		return "ClienteCasal"
-	return "ClienteAmanda"
+	return _tipo_de_cliente_data(cliente_atual)
 
 
 func _instanciar_cliente_por_tipo(tipo: String) -> ClienteData:
