@@ -1,0 +1,58 @@
+[gd_scene format=3 uid="uid://d7k2m_est_atend_bg"]
+
+[ext_resource type="Texture2D" uid="uid://cbca0ildvv128" path="res://assets/textures/visao_atendente(1).png" id="1_visao"]
+
+[node name="EstacaoAtendimento" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="FundoVisaoAtendente" type="TextureRect" parent="."]
+z_index = -2
+z_as_relative = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+texture = ExtResource("1_visao")
+
+[node name="RetratoClienteClip" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 1.0
+anchor_bottom = 0.86
+offset_left = 20.0
+offset_right = -136.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+clip_contents = true
+z_index = 0
+z_as_relative = false
+
+[node name="SpriteCliente" type="TextureRect" parent="RetratoClienteClip"]
+custom_minimum_size = Vector2(360, 560)
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -720.0
+offset_right = 180.0
+offset_bottom = 40.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
