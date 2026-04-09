@@ -28,6 +28,8 @@ const COLUNA_PRINCIPAL_OFFSET_ESQ := 20.0
 const COLUNA_PRINCIPAL_OFFSET_DIR := -136.0
 const COLUNA_PRINCIPAL_OFFSET_TOP := 96.0
 const COLUNA_PRINCIPAL_OFFSET_BOT := -148.0
+## Tempo no balcão para ler o feedback do cliente antes do próximo pedido (entrega / tempo esgotado).
+const SEGUNDOS_PAUSA_FEEDBACK_PEDIDO := 6.0
 
 @onready var label_hud: Label = $HUDSuperior/HBoxHUD/PainelHUDDinheiro/LabelHUDUX
 @onready var label_status: Label = $HUDSuperior/HBoxHUD/LabelStatusUX
@@ -398,8 +400,13 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	vbox_mont.add_child(lab_mont)
 	_labels_lista_ingredientes.append(lab_mont)
 
-	if is_instance_valid(btn_entregar):
-		btn_entregar.reparent(vbox_mont)
+	# Descarte (lixeira) em cima, entrega em baixo — ordem invertida em relação ao layout antigo.
+	var btn_lixeira_n: Node = vbox_legacy.get_node_or_null("BtnLixeira")
+	if is_instance_valid(btn_lixeira_n):
+		btn_lixeira_n.reparent(vbox_mont)
+		if btn_lixeira_n is Button:
+			(btn_lixeira_n as Button).mouse_filter = Control.MOUSE_FILTER_STOP
+		_envolver_lixeira_rodape_montagem(vbox_mont)
 	# Espaço flexível *acima* do texto de montagem: empurra o feedback para baixo (abaixo da área dos sushis).
 	if is_instance_valid(spacer_bancada):
 		spacer_bancada.reparent(vbox_mont)
@@ -408,12 +415,8 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	var label_montagem_n: Node = vbox_legacy.get_node_or_null("LabelMontagemAtual")
 	if is_instance_valid(label_montagem_n):
 		label_montagem_n.reparent(vbox_mont)
-	var btn_lixeira_n: Node = vbox_legacy.get_node_or_null("BtnLixeira")
-	if is_instance_valid(btn_lixeira_n):
-		btn_lixeira_n.reparent(vbox_mont)
-		if btn_lixeira_n is Button:
-			(btn_lixeira_n as Button).mouse_filter = Control.MOUSE_FILTER_STOP
-		_envolver_lixeira_rodape_montagem(vbox_mont)
+	if is_instance_valid(btn_entregar):
+		btn_entregar.reparent(vbox_mont)
 
 	var fundo_fritura := TextureRect.new()
 	fundo_fritura.name = "FundoFrituraEstacao"
@@ -1540,11 +1543,11 @@ func _gerar_feedback_visual(sucesso: bool) -> void:
 func _on_pedido_entregue(sucesso: bool, dinheiro: float, estrelas: float) -> void:
 	if _jogo_finalizado:
 		return
+	mudar_estacao(ESTACAO_ATENDIMENTO)
 	_gerar_feedback_visual(sucesso)
 	_entrega_em_andamento = false
 	_atualizar_texto_lista_ingredientes_pedido("", false)
 	_definir_instrucao_balcao("", false)
-	_limpar_textura_cliente_sprite()
 
 	if sucesso:
 		label_status.text = "Pedido entregue! Ganhou R$ %.2f" % dinheiro
@@ -1557,14 +1560,17 @@ func _on_pedido_entregue(sucesso: bool, dinheiro: float, estrelas: float) -> voi
 	_limpar_pilha_visual()
 	_atualizar_visibilidade_controles_turno()
 	_persistir_save()
-	get_tree().create_timer(2.0).timeout.connect(order_manager.gerar_novo_pedido)
+	get_tree().create_timer(SEGUNDOS_PAUSA_FEEDBACK_PEDIDO).timeout.connect(func() -> void:
+		_limpar_textura_cliente_sprite()
+		order_manager.gerar_novo_pedido()
+	)
 
 func _on_tempo_esgotado() -> void:
 	if _jogo_finalizado:
 		return
+	mudar_estacao(ESTACAO_ATENDIMENTO)
 	_atualizar_texto_lista_ingredientes_pedido("", false)
 	_definir_instrucao_balcao("", false)
-	_limpar_textura_cliente_sprite()
 
 	label_status.text = "Tempo esgotado!"
 	label_dialogo.text = "[%s]: Cansei de esperar. Vou comer no Jôw!" % order_manager.cliente_atual.nome
@@ -1573,7 +1579,10 @@ func _on_tempo_esgotado() -> void:
 	_limpar_pilha_visual()
 	_atualizar_visibilidade_controles_turno()
 	_persistir_save()
-	get_tree().create_timer(2.0).timeout.connect(order_manager.gerar_novo_pedido)
+	get_tree().create_timer(SEGUNDOS_PAUSA_FEEDBACK_PEDIDO).timeout.connect(func() -> void:
+		_limpar_textura_cliente_sprite()
+		order_manager.gerar_novo_pedido()
+	)
 
 func _on_expediente_encerrado() -> void:
 	if _jogo_finalizado:
