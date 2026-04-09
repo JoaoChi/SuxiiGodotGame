@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://dm7hfr1yk8p2w" path="res://scripts/fryer_drop_zone.gd" id="5_fryer"]
 [ext_resource type="Script" uid="uid://bm8k2j4xqyp7w" path="res://scripts/tabua_corte.gd" id="6_tabua"]
 [ext_resource type="Texture2D" uid="uid://d3p2jgf1t5po3" path="res://assets/textures/Bancadinhaaaaaaaaaaaaaaaaaaaa.png" id="8_bancada"]
-[ext_resource type="PackedScene" uid="uid://d7k2m_est_atend_bg" path="res://scenes/estacao_atendimento.tscn" id="9_est_atend"]
+[ext_resource type="PackedScene" path="res://scenes/estacao_atendimento.tscn" id="9_est_atend"]
 
 [node name="Game" type="Control" unique_id=603755664]
 layout_mode = 3
@@ -21,7 +21,8 @@ script = ExtResource("1_game")
 [node name="OrderManager" type="Node" parent="." unique_id=3169729]
 script = ExtResource("2_order")
 
-[node name="EstacaoAtendimento" parent="." instance=ExtResource("9_est_atend")]
+[node name="EstacaoAtendimento" parent="." unique_id=702896411 instance=ExtResource("9_est_atend")]
+layout_mode = 1
 
 [node name="BancadaFundo" type="TextureRect" parent="." unique_id=789100001]
 z_index = -10
@@ -63,41 +64,62 @@ anchor_right = 1.0
 offset_bottom = 88.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 10
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
 
 [node name="HBoxHUD" type="HBoxContainer" parent="HUDSuperior" unique_id=1879701001]
 layout_mode = 2
+theme_override_constants/separation = 12
 
-[node name="LabelHUDUX" type="Label" parent="HUDSuperior/HBoxHUD" unique_id=1993103206]
+[node name="PainelHUDDinheiro" type="Control" parent="HUDSuperior/HBoxHUD" unique_id=1993103205]
+custom_minimum_size = Vector2(440, 76)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 18
+size_flags_horizontal = 0
+size_flags_vertical = 4
+
+[node name="LabelHUDUX" type="Label" parent="HUDSuperior/HBoxHUD/PainelHUDDinheiro" unique_id=1993103206]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.36
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -146.40001
+offset_top = 11.0
+offset_right = 38.0
+offset_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.98, 0.94, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 15
 text = "Dinheiro: R$ 0.00 | Reputação: 5.0 | Combo: 0"
-horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
 
 [node name="LabelStatusUX" type="Label" parent="HUDSuperior/HBoxHUD" unique_id=651627779]
 layout_mode = 2
-size_flags_horizontal = 2
-theme_override_font_sizes/font_size = 18
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.98, 0.94, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 17
 text = "Status"
-horizontal_alignment = 1
+horizontal_alignment = 2
+vertical_alignment = 1
 autowrap_mode = 2
 
 [node name="PainelDialogo" type="PanelContainer" parent="." unique_id=1718539097]
 z_index = 16
 layout_mode = 1
-anchors_preset = 0
-anchor_left = 0.0
-anchor_top = 0.30
+anchors_preset = -1
+anchor_top = 0.3
 anchor_right = 1.0
-anchor_bottom = 0.40
+anchor_bottom = 0.4
 offset_left = 20.0
-offset_top = 0.0
 offset_right = -20.0
-offset_bottom = 0.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -360,7 +382,7 @@ autowrap_mode = 2
 custom_minimum_size = Vector2(150, 200)
 layout_mode = 2
 size_flags_vertical = 3
-color = Color(0.18, 0.18, 0.2, 1)
+color = Color(0.18, 0.18, 0.2, 0)
 script = ExtResource("5_fryer")
 
 [node name="ProgressBarFritura" type="ProgressBar" parent="VBoxContainer/HBoxBancadaEFritura/VBoxFritura/Fritadeira" unique_id=576293079]
@@ -399,7 +421,7 @@ text = "Abrir Restaurante"
 z_index = 11
 custom_minimum_size = Vector2(280, 380)
 layout_mode = 1
-anchors_preset = 8
+anchors_preset = -1
 anchor_left = 0.5
 anchor_top = 0.58
 anchor_right = 0.5

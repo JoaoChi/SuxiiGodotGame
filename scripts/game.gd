@@ -16,7 +16,10 @@ const TEXTURAS_SUSHIS: Dictionary = {
 	"Hot_Filadelfia": "res://features/food/hot.png"
 }
 
-@onready var label_hud: Label = $HUDSuperior/HBoxHUD/LabelHUDUX
+const TEX_FUNDO_FRITURA: Texture2D = preload("res://assets/textures/fritadeira.png")
+const TEX_FUNDO_ESTOQUE: Texture2D = preload("res://assets/textures/estoque.png")
+
+@onready var label_hud: Label = $HUDSuperior/HBoxHUD/PainelHUDDinheiro/LabelHUDUX
 @onready var label_status: Label = $HUDSuperior/HBoxHUD/LabelStatusUX
 @onready var order_manager = $OrderManager
 @onready var painel_resumo = $PainelResumo
@@ -80,8 +83,8 @@ func _ready() -> void:
 	_configurar_containers_estacoes_e_navegacao()
 	if is_instance_valid(label_status):
 		label_status.clip_contents = true
-		label_status.custom_minimum_size = Vector2(560, 44)
-		label_status.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+		label_status.custom_minimum_size = Vector2(160, 40)
+		label_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_atualizar_botoes_estoque_bancada()
 	_aplicar_texturas_botoes()
 	_atualizar_textos_botoes_preparo()
@@ -215,7 +218,7 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 	barra_tempo = vbox_legacy.get_node_or_null("BarraTempo") as ProgressBar
 	margin_estoque = vbox_legacy.get_node_or_null("MarginContainerEstoque") as MarginContainer
 	if is_instance_valid(margin_estoque):
-		label_estoque = margin_estoque.get_node_or_null("LabelEstoqueUX") as Label
+		label_estoque = margin_estoque.find_child("LabelEstoqueUX", true, false) as Label
 	btn_tabua = vbox_legacy.get_node_or_null("BtnTabua") as Button
 	hbox_preparo = vbox_legacy.get_node_or_null("HBoxPreparo") as HBoxContainer
 	if is_instance_valid(hbox_preparo):
@@ -321,6 +324,15 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 
 	_estacao_atendimento.move_child(vbox_atend, -1)
 
+	var fundo_estoque := TextureRect.new()
+	fundo_estoque.name = "FundoEstoqueEstacao"
+	fundo_estoque.texture = TEX_FUNDO_ESTOQUE
+	fundo_estoque.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fundo_estoque.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fundo_estoque.expand_mode = 1
+	fundo_estoque.stretch_mode = 6
+	_estacao_preparo.add_child(fundo_estoque)
+
 	var vbox_prep := VBoxContainer.new()
 	vbox_prep.name = "VBoxColunaPreparo"
 	vbox_prep.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -374,6 +386,16 @@ func _configurar_containers_estacoes_e_navegacao() -> void:
 		btn_lixeira_n.reparent(vbox_mont)
 		if btn_lixeira_n is Button:
 			(btn_lixeira_n as Button).mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var fundo_fritura := TextureRect.new()
+	fundo_fritura.name = "FundoFrituraEstacao"
+	fundo_fritura.texture = TEX_FUNDO_FRITURA
+	fundo_fritura.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fundo_fritura.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Mesmos valores que BancadaFundo (game.tscn): preenche a área da estação.
+	fundo_fritura.expand_mode = 1
+	fundo_fritura.stretch_mode = 6
+	_estacao_fritura.add_child(fundo_fritura)
 
 	var vbox_col_frit := VBoxContainer.new()
 	vbox_col_frit.name = "VBoxColunaFritura"
@@ -722,7 +744,7 @@ func preparar_novo_dia() -> void:
 func _atualizar_ui_preparacao_turno() -> void:
 	if is_instance_valid(label_pedido):
 		label_pedido.text = "Dia %d - Restaurante Fechado\nDinheiro Disponível: R$ %.2f" % [GameManager.dia_atual, GameManager.dinheiro_atual]
-	label_status.text = "Prepare sua bancada."
+	label_status.text = ""
 	if is_instance_valid(label_dialogo):
 		label_dialogo.text = ""
 	_atualizar_texto_lista_ingredientes_pedido("", false)

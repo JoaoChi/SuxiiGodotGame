@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cbca0ildvv128"
-path="res://.godot/imported/visao_atendente(1).jpg-36177a778ac67b7ca25aacc96d68701e.ctex"
+uid="uid://dn5c8b5el2r6k"
+path="res://.godot/imported/estoque.png-e16be3dd840d9fbc98e54bb17bee3b4a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/visao_atendente(1).jpg"
-dest_files=["res://.godot/imported/visao_atendente(1).jpg-36177a778ac67b7ca25aacc96d68701e.ctex"]
+source_file="res://assets/textures/estoque.png"
+dest_files=["res://.godot/imported/estoque.png-e16be3dd840d9fbc98e54bb17bee3b4a.ctex"]
 
 [params]
 
